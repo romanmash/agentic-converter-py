@@ -13,6 +13,7 @@ src/main.py          → CLI entry point, ALL file I/O lives here
 src/config/manager.py → Configuration loading (config.json + .env + CLI)
 src/agents/          → Converter and Reviewer agents (pure functions, no I/O)
 src/graph/pipeline.py → PipelineState model + orchestration loop
+src/report/generator.py → Conversion report generation (pure function)
 src/llm/client.py    → OpenAI SDK wrapper (injected, not global)
 src/prompts/         → System prompts as Markdown files
 tests/               → pytest (must pass WITHOUT LM Studio running)

@@ -1,6 +1,6 @@
 [project]
 name = "agentic-converter"
-version = "1.0.0"
+version = "1.1.0"
 description = "CLI tool that converts Jenkinsfiles to GitHub Actions YAML using a local LLM and an iterative agentic loop"
 requires-python = ">=3.10"
 dependencies = [

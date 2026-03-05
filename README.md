@@ -91,7 +91,7 @@ All runtime data lives in `.data/` (gitignored):
 | Directory | Purpose |
 |---|---|
 | `.data/input/` | Place Jenkinsfiles here for conversion |
-| `.data/output/` | Generated GitHub Actions YAML (created automatically) |
+| `.data/output/` | Generated GitHub Actions YAML + conversion reports |
 
 ## Architecture
 
@@ -103,6 +103,7 @@ src/
 │   ├── converter.py     # Jenkinsfile → YAML via LLM
 │   └── reviewer.py      # Evaluates YAML, returns APPROVED/CHANGES_NEEDED
 ├── graph/pipeline.py    # PipelineState + orchestration loop
+├── report/generator.py  # Conversion report generation (confidence, checklist)
 ├── llm/client.py        # OpenAI SDK wrapper (Dependency Injection)
 └── prompts/             # System prompts as Markdown (iterate without code changes)
 ```

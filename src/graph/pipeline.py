@@ -23,11 +23,20 @@ class PipelineStatus(str, Enum):
     ERROR = "error"
 
 
+class IterationRecord(BaseModel):
+    """Single step in the agentic loop history."""
+
+    iteration: int
+    action: str  # "convert" or "review"
+    result: str  # "Generated YAML", "APPROVED", "CHANGES NEEDED"
+    comment: str = ""  # Details or reviewer feedback
+
+
 class PipelineState(BaseModel):
     """Core state model passed through the agentic loop.
 
     Tracks the Jenkinsfile content, generated YAML, reviewer feedback,
-    iteration count, and current status.
+    iteration count, current status, and full iteration history.
     """
 
     jenkinsfile: str
@@ -35,6 +44,7 @@ class PipelineState(BaseModel):
     review_feedback: Optional[str] = None
     iteration: int = Field(default=0, ge=0)
     status: PipelineStatus = PipelineStatus.PENDING
+    history: list[IterationRecord] = Field(default_factory=list)
 
 
 def run_pipeline(
@@ -54,7 +64,7 @@ def run_pipeline(
         verbose: Print progress to console.
 
     Returns:
-        Final PipelineState with status and workflow_yaml.
+        Final PipelineState with status, workflow_yaml, and history.
     """
     from src.agents.converter import convert
     from src.agents.reviewer import review
@@ -68,11 +78,53 @@ def run_pipeline(
         # Converter pass
         state = convert(state, client)
 
+        # Record converter step
+        state = state.model_copy(
+            update={
+                "history": state.history
+                + [
+                    IterationRecord(
+                        iteration=state.iteration,
+                        action="convert",
+                        result="Generated YAML"
+                        if state.iteration == 1
+                        else "Applied reviewer feedback",
+                        comment="",
+                    )
+                ]
+            }
+        )
+
         if verbose:
             print(f"  🔍 Iteration {i + 1}/{max_iterations}: reviewing...")
 
         # Reviewer pass
         state = review(state, client)
+
+        # Record reviewer step
+        is_approved = state.status == PipelineStatus.APPROVED
+        review_result = "APPROVED" if is_approved else "CHANGES NEEDED"
+        
+        # Clean up feedback for report table display
+        comment = ""
+        if not is_approved and state.review_feedback:
+            # Replace newlines with <br> to prevent breaking markdown tables
+            # while preserving the full text and some structure.
+            comment = state.review_feedback.strip().replace("\n", "<br>")
+
+        state = state.model_copy(
+            update={
+                "history": state.history
+                + [
+                    IterationRecord(
+                        iteration=state.iteration,
+                        action="review",
+                        result=review_result,
+                        comment=comment,
+                    )
+                ]
+            }
+        )
 
         if state.status == PipelineStatus.APPROVED:
             if verbose:
@@ -80,11 +132,11 @@ def run_pipeline(
             return state
 
         if verbose and state.review_feedback:
-            feedback_preview = state.review_feedback[:100]
-            print(f"  ⚠️  Changes needed: {feedback_preview}...")
+            print(f"  ⚠️  Changes needed:\n{state.review_feedback}")
 
     # Max iterations reached
     state = state.model_copy(update={"status": PipelineStatus.MAX_ITERATIONS})
     if verbose:
         print(f"  ⏱️  Max iterations ({max_iterations}) reached")
     return state
+

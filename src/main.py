@@ -14,6 +14,7 @@ import yaml
 from src.config.manager import load_config, merge_with_cli
 from src.graph.pipeline import PipelineStatus, run_pipeline
 from src.llm.client import LLMClient
+from src.report.generator import generate_report
 
 
 def build_parser(version: str) -> argparse.ArgumentParser:
@@ -149,6 +150,16 @@ def main() -> None:
 
         # Write output (I/O here only)
         output_file.write_text(state.workflow_yaml, encoding="utf-8")
+
+        # Generate and write conversion report
+        report_md = generate_report(
+            state=state,
+            source_path=str(jf_path),
+            output_path=str(output_file),
+            max_iterations=config.max_iterations,
+        )
+        report_file = output_dir / "report.md"
+        report_file.write_text(report_md, encoding="utf-8")
 
         status_emoji = "✅" if state.status == PipelineStatus.APPROVED else "⚠️"
         print(f"  {status_emoji} {output_file} ({state.status.value}, {state.iteration} iteration(s))")
