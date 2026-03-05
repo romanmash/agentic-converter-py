@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [1.2.0] - 2026-03-05
+
+### Added
+
+- Configurable LLM hyperparameters (`temperature`, `max_tokens`, `top_p`, `top_k`) through `config.json` and `.env` override
+- Added nested parameters tailored specifically for `converter` and `reviewer` nodes out of the box.
 
 ## [1.1.0] - 2026-03-05
 

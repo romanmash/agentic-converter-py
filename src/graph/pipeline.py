@@ -7,9 +7,13 @@ converter↔reviewer agentic loop.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from src.config.manager import LLMParameters
+    from src.llm.client import LLMClient
 
 
 class PipelineStatus(str, Enum):
@@ -50,6 +54,8 @@ class PipelineState(BaseModel):
 def run_pipeline(
     jenkinsfile: str,
     client: "LLMClient",
+    converter_params: "LLMParameters",
+    reviewer_params: "LLMParameters",
     max_iterations: int = 5,
     verbose: bool = False,
 ) -> PipelineState:
@@ -60,6 +66,8 @@ def run_pipeline(
     Args:
         jenkinsfile: Raw Jenkinsfile content.
         client: LLM client for API calls.
+        converter_params: Converter-scoped LLM parameters.
+        reviewer_params: Reviewer-scoped LLM parameters.
         max_iterations: Maximum loop iterations before stopping.
         verbose: Print progress to console.
 
@@ -76,7 +84,11 @@ def run_pipeline(
             print(f"  🔄 Iteration {i + 1}/{max_iterations}: converting...")
 
         # Converter pass
-        state = convert(state, client)
+        state = convert(
+            state=state,
+            client=client,
+            llm_params=converter_params,
+        )
 
         # Record converter step
         state = state.model_copy(
@@ -99,7 +111,11 @@ def run_pipeline(
             print(f"  🔍 Iteration {i + 1}/{max_iterations}: reviewing...")
 
         # Reviewer pass
-        state = review(state, client)
+        state = review(
+            state=state,
+            client=client,
+            llm_params=reviewer_params,
+        )
 
         # Record reviewer step
         is_approved = state.status == PipelineStatus.APPROVED

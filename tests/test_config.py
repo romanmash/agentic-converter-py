@@ -18,26 +18,33 @@ from src.config.manager import AppConfig, LLMConfig, load_config, merge_with_cli
 
 
 class TestDefaults:
-    """Test default configuration values."""
-
-    def test_default_config_has_expected_values(self) -> None:
-        config = AppConfig()
-        assert config.version == "1.0.0"
-        assert config.max_iterations == 5
-        assert config.output_dir == ".data/output"
-        assert config.verbose is False
-
-    def test_default_llm_config(self) -> None:
-        config = AppConfig()
-        assert config.llm.base_url == "http://localhost:1234/v1"
-        assert config.llm.api_key == "lm-studio"
-        assert config.llm.model == "qwen2.5-coder-14b-instruct"
+    """Test default configuration validation constraints."""
 
     def test_max_iterations_validation(self) -> None:
         with pytest.raises(ValueError):
-            AppConfig(max_iterations=0)
+            AppConfig(
+                version="1.2.0",
+                max_iterations=0, 
+                output_dir="foo", 
+                verbose=False,
+                llm=LLMConfig(
+                    base_url="a", api_key="b", model="c",
+                    converter={"temperature": 0.6, "max_tokens": 8192, "top_p": 0.95, "top_k": 40},
+                    reviewer={"temperature": 0.2, "max_tokens": 8192, "top_p": 0.95, "top_k": 40}
+                )
+            )
         with pytest.raises(ValueError):
-            AppConfig(max_iterations=21)
+            AppConfig(
+                version="1.2.0",
+                max_iterations=21,
+                output_dir="foo",
+                verbose=False,
+                llm=LLMConfig(
+                    base_url="a", api_key="b", model="c",
+                    converter={"temperature": 0.6, "max_tokens": 8192, "top_p": 0.95, "top_k": 40},
+                    reviewer={"temperature": 0.2, "max_tokens": 8192, "top_p": 0.95, "top_k": 40}
+                )
+            )
 
 
 class TestConfigJsonOverrides:
@@ -53,6 +60,18 @@ class TestConfigJsonOverrides:
                 "base_url": "http://custom:5000/v1",
                 "api_key": "custom-key",
                 "model": "custom-model",
+                "converter": {
+                    "temperature": 0.5,
+                    "max_tokens": 100,
+                    "top_p": 0.5,
+                    "top_k": 10,
+                },
+                "reviewer": {
+                    "temperature": 0.1,
+                    "max_tokens": 100,
+                    "top_p": 0.5,
+                    "top_k": 10,
+                },
             },
         }
         config_file = tmp_path / "config.json"
@@ -66,11 +85,10 @@ class TestConfigJsonOverrides:
         assert config.verbose is True
         assert config.llm.base_url == "http://custom:5000/v1"
 
-    def test_load_missing_config_uses_defaults(self, tmp_path: Path) -> None:
-        config = load_config(config_path=tmp_path / "nonexistent.json")
-
-        assert config.version == "1.0.0"
-        assert config.max_iterations == 5
+    def test_load_missing_config_raises_validation_error(self, tmp_path: Path) -> None:
+        # Since we removed all hardcoded defaults, loading from nowhere raises Pydantic error
+        with pytest.raises(ValueError):
+            load_config(config_path=tmp_path / "nonexistent.json")
 
 
 class TestEnvOverrides:
@@ -84,6 +102,18 @@ class TestEnvOverrides:
         assert config.llm.base_url == "http://env-override:9999/v1"
         assert config.llm.api_key == "env-key"
         assert config.llm.model == "env-model"
+        
+        # Validate Converter overrides
+        assert config.llm.converter.temperature == 0.9
+        assert config.llm.converter.max_tokens == 4096
+        assert config.llm.converter.top_p == 0.90
+        assert config.llm.converter.top_k == 30
+
+        # Validate Reviewer overrides
+        assert config.llm.reviewer.temperature == 0.1
+        assert config.llm.reviewer.max_tokens == 1024
+        assert config.llm.reviewer.top_p == 1.0
+        assert config.llm.reviewer.top_k == 50
 
     def test_env_does_not_affect_non_llm_settings(
         self, tmp_config_dir: Path, mock_env: None
@@ -98,11 +128,9 @@ class TestEnvOverrides:
 class TestCLIPrecedence:
     """Test that CLI arguments override everything."""
 
-    def test_cli_overrides_config(self) -> None:
-        config = AppConfig(max_iterations=5, output_dir=".data/output", verbose=False)
-
+    def test_cli_overrides_config(self, default_config: AppConfig) -> None:
         merged = merge_with_cli(
-            config,
+            default_config,
             {"output_dir": "cli_output", "max_iterations": 10, "verbose": True},
         )
 
@@ -110,24 +138,20 @@ class TestCLIPrecedence:
         assert merged.max_iterations == 10
         assert merged.verbose is True
 
-    def test_cli_none_values_dont_override(self) -> None:
-        config = AppConfig(max_iterations=5)
-
+    def test_cli_none_values_dont_override(self, default_config: AppConfig) -> None:
         merged = merge_with_cli(
-            config,
+            default_config,
             {"output_dir": None, "max_iterations": None, "verbose": None},
         )
 
         assert merged.max_iterations == 5
         assert merged.output_dir == ".data/output"
 
-    def test_cli_partial_override(self) -> None:
-        config = AppConfig(max_iterations=5, output_dir="original")
-
-        merged = merge_with_cli(config, {"max_iterations": 8})
+    def test_cli_partial_override(self, default_config: AppConfig) -> None:
+        merged = merge_with_cli(default_config, {"max_iterations": 8})
 
         assert merged.max_iterations == 8
-        assert merged.output_dir == "original"  # Unchanged
+        assert merged.output_dir == ".data/output"  # Unchanged
 
     def test_full_precedence_chain(
         self, tmp_config_dir: Path, mock_env: None

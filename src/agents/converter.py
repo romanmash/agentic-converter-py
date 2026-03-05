@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from src.config.manager import LLMParameters
 from src.graph.pipeline import PipelineState, PipelineStatus
 from src.llm.client import LLMClient
 
@@ -21,7 +22,9 @@ def _load_prompt() -> str:
     return _PROMPT_PATH.read_text(encoding="utf-8")
 
 
-def convert(state: PipelineState, client: LLMClient) -> PipelineState:
+def convert(
+    state: PipelineState, client: LLMClient, llm_params: LLMParameters
+) -> PipelineState:
     """Convert a Jenkinsfile to GitHub Actions YAML via LLM.
 
     If review feedback exists (iteration > 0), it is included
@@ -30,6 +33,7 @@ def convert(state: PipelineState, client: LLMClient) -> PipelineState:
     Args:
         state: Current pipeline state with jenkinsfile content.
         client: LLM client for making chat requests.
+        llm_params: The converter-scoped LLM parameters.
 
     Returns:
         Updated PipelineState with workflow_yaml populated.
@@ -52,7 +56,11 @@ def convert(state: PipelineState, client: LLMClient) -> PipelineState:
         )
 
     # Call LLM
-    yaml_output = client.chat(system_prompt, user_prompt)
+    yaml_output = client.chat(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        llm_params=llm_params,
+    )
 
     # Strip markdown fences if LLM wraps output
     yaml_output = yaml_output.strip()

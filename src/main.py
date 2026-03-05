@@ -124,6 +124,8 @@ def main() -> None:
             state = run_pipeline(
                 jenkinsfile=jenkinsfile_content,
                 client=client,
+                converter_params=config.llm.converter,
+                reviewer_params=config.llm.reviewer,
                 max_iterations=config.max_iterations,
                 verbose=config.verbose,
             )

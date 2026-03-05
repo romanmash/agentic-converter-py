@@ -10,8 +10,16 @@ Tests cover:
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
+from pathlib import Path
+
+
+def _config_version() -> str:
+    config_path = Path(__file__).resolve().parent.parent / "config.json"
+    config_data = json.loads(config_path.read_text(encoding="utf-8"))
+    return str(config_data["version"])
 
 
 class TestCLIParsing:
@@ -34,7 +42,7 @@ class TestCLIParsing:
             text=True,
         )
         assert result.returncode == 0
-        assert "1.1.0" in result.stdout
+        assert _config_version() in result.stdout
 
     def test_missing_path_error(self) -> None:
         result = subprocess.run(

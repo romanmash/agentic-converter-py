@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from openai import OpenAI
 
-from src.config.manager import AppConfig
+from src.config.manager import AppConfig, LLMParameters
 
 
 class LLMClient:
@@ -23,6 +23,7 @@ class LLMClient:
         Args:
             config: AppConfig containing LLM connection settings.
         """
+        self._config = config
         self._client = OpenAI(
             base_url=config.llm.base_url,
             api_key=config.llm.api_key,
@@ -33,14 +34,14 @@ class LLMClient:
         self,
         system_prompt: str,
         user_prompt: str,
-        temperature: float = 0.3,
+        llm_params: LLMParameters,
     ) -> str:
         """Send a chat completion request to the LLM.
 
         Args:
             system_prompt: System message defining the agent's role.
             user_prompt: User message with the task input.
-            temperature: Sampling temperature (lower = more deterministic).
+            llm_params: Scoped parameters for generation (temperature, top_p, top_k, max_tokens).
 
         Returns:
             The assistant's response text.
@@ -48,13 +49,20 @@ class LLMClient:
         Raises:
             openai.APIConnectionError: If LM Studio is unreachable.
         """
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=[
+        kwargs = {
+            "model": self._model,
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=temperature,
-        )
+            "temperature": llm_params.temperature,
+            "max_tokens": llm_params.max_tokens,
+            "top_p": llm_params.top_p,
+        }
+
+        if llm_params.top_k is not None:
+            kwargs["extra_body"] = {"top_k": llm_params.top_k}
+
+        response = self._client.chat.completions.create(**kwargs)
         content = response.choices[0].message.content
         return content if content else ""

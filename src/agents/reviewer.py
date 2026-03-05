@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from src.config.manager import LLMParameters
 from src.graph.pipeline import PipelineState, PipelineStatus
 from src.llm.client import LLMClient
 
@@ -52,12 +53,15 @@ def _parse_verdict(response: str) -> tuple[PipelineStatus, str | None]:
     return PipelineStatus.CHANGES_NEEDED, response
 
 
-def review(state: PipelineState, client: LLMClient) -> PipelineState:
+def review(
+    state: PipelineState, client: LLMClient, llm_params: LLMParameters
+) -> PipelineState:
     """Review generated YAML against the original Jenkinsfile.
 
     Args:
         state: Current pipeline state with workflow_yaml populated.
         client: LLM client for making chat requests.
+        llm_params: The reviewer-scoped LLM parameters.
 
     Returns:
         Updated PipelineState with status and review_feedback.
@@ -70,7 +74,11 @@ def review(state: PipelineState, client: LLMClient) -> PipelineState:
         f"## Generated GitHub Actions YAML\n```yaml\n{state.workflow_yaml}\n```"
     )
 
-    response = client.chat(system_prompt, user_prompt, temperature=0.1)
+    response = client.chat(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        llm_params=llm_params,
+    )
     status, feedback = _parse_verdict(response)
 
     return state.model_copy(

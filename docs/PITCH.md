@@ -61,8 +61,8 @@ flowchart LR
 | `main.py` | CLI argument parsing, file reads/writes, orchestration entry point | **Only module with side-effects** (Clean Architecture I/O boundary) |
 | `config/manager.py` | Loads and merges configuration from 3 layers (config.json → .env → CLI) | Three-layer precedence chain |
 | `graph/pipeline.py` | Defines `PipelineState` (Pydantic model), `IterationRecord`, and `run_pipeline()` loop | Immutable state transitions via `model_copy()` |
-| `agents/converter.py` | Builds converter prompt, calls LLM, extracts YAML from response | Pure function: `(state, client) → state` |
-| `agents/reviewer.py` | Builds reviewer prompt, calls LLM, parses APPROVED/CHANGES_NEEDED verdict | Pure function: `(state, client) → state` |
+| `agents/converter.py` | Builds converter prompt, calls LLM, extracts YAML from response | Pure function: `(state, client, llm_params) → state` |
+| `agents/reviewer.py` | Builds reviewer prompt, calls LLM, parses APPROVED/CHANGES_NEEDED verdict | Pure function: `(state, client, llm_params) → state` |
 | `report/generator.py` | Computes confidence level, generates markdown report with checklist | Pure function: no I/O, no LLM calls |
 | `llm/client.py` | Thin OpenAI SDK wrapper configured for LM Studio | Dependency-injected, not globally instantiated |
 | `prompts/*.md` | System prompts stored as Markdown files | Decoupled from code: edit prompts without touching Python |
@@ -100,6 +100,20 @@ flowchart TD
     style Verdict fill:#FFC107,color:#000
     style MaxCheck fill:#FF9800,color:#fff
 ```
+
+### Engineer-Style Agent Tuning (Distinct Cognitive Roles)
+
+The Converter and Reviewer nodes are intentionally tuned with different inference parameters because they perform fundamentally disparate kinds of work:
+
+- **Converter (Synthesis Phase)**:
+  - **Role**: Generate new YAML structure, map Jenkins concepts → GHA.
+  - **Goal**: Good mapping coverage without hallucinating.
+  - **Tuning**: Configured for synthesis logic (`temperature=0.35`, `top_p=0.95`, `top_k=40`, `max_tokens=4096`). Needs restrained creativity to interpret custom scripts and translate them.
+
+- **Reviewer (Verification + Minimal Edits)**:
+  - **Role**: Verification + minimal edits. Be strict, deterministic, catch mistakes.
+  - **Goal**: Maximize correctness and repeatability. Reviewers should not "invent" steps; they must either approve exactly or produce the smallest correct patch. Make it boring + consistent.
+  - **Tuning**: Configured for rigid determinism (`temperature=0.1`, `top_p=0.9`, `top_k=20`, `max_tokens=4096`).
 
 ### How State Flows
 
@@ -184,7 +198,7 @@ This separation makes prompt tuning accessible to non-developers.
 
 ---
 
-## 5. Conversion Report (v1.1.0)
+## 5. Conversion Report
 
 Each conversion generates a `report.md` alongside `ci.yml`, providing transparency
 into the agentic process:

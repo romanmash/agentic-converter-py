@@ -86,7 +86,7 @@ Three-layer configuration with clear precedence: **CLI > Environment > config.js
 | Layer | File | Purpose |
 |---|---|---|
 | Defaults | `config.json` | App behavior (version, max_iterations, output_dir) |
-| Secrets | `.env` | LLM connection (LLM_BASE_URL, LLM_API_KEY, LLM_MODEL) |
+| Environment | `.env` | Optional overrides for all defaults except `version` (MAX_ITERATIONS, OUTPUT_DIR, VERBOSE, LLM_*) |
 | Overrides | CLI args | Per-run overrides (-n, -o, -v) |
 
 ### Working Data
