@@ -47,4 +47,4 @@ uv run pytest -v        # Verbose output
 
 - This tool runs **locally only** — no external network calls
 - `.env` contains secrets — never commit it
-- `output/` is gitignored — generated files only
+- `.data/` is gitignored — working data only (input Jenkinsfiles + output YAML)

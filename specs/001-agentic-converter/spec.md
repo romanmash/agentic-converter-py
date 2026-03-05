@@ -13,11 +13,11 @@ As a DevOps engineer, I want to convert a single Jenkinsfile to a GitHub Actions
 
 **Why this priority**: Core functionality — without this, nothing else works. This is the MVP.
 
-**Independent Test**: Run `uv run python src/main.py input/1/Jenkinsfile` and verify `output/1/ci.yml` is valid YAML covering all stages.
+**Independent Test**: Run `uv run python -m src.main .data/input/1/Jenkinsfile` and verify `.data/output/1/ci.yml` is valid YAML covering all stages.
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid Jenkinsfile at `input/1/Jenkinsfile`, **When** I run the tool, **Then** `output/1/ci.yml` is created with valid GitHub Actions YAML
+1. **Given** a valid Jenkinsfile at `.data/input/1/Jenkinsfile`, **When** I run the tool, **Then** `.data/output/1/ci.yml` is created with valid GitHub Actions YAML
 2. **Given** LM Studio is not running, **When** I run the tool, **Then** I get a clear error message and exit code 1
 
 ---
@@ -44,12 +44,12 @@ As a developer, I want to process an entire folder of Jenkinsfiles at once so th
 
 **Why this priority**: Important for real-world use but requires US1+US2 working first.
 
-**Independent Test**: Run `uv run python src/main.py input/` and verify both `output/1/ci.yml` and `output/2/ci.yml` are created.
+**Independent Test**: Run `uv run python -m src.main .data/input/` and verify both `.data/output/1/ci.yml` and `.data/output/2/ci.yml` are created.
 
 **Acceptance Scenarios**:
 
-1. **Given** a directory `input/` with Jenkinsfiles in subdirectories, **When** I run the tool, **Then** all Jenkinsfiles are found recursively and processed alphabetically
-2. **Given** input structure `input/1/Jenkinsfile` and `input/2/Jenkinsfile`, **When** processed, **Then** output mirrors the structure: `output/1/ci.yml` and `output/2/ci.yml`
+1. **Given** a directory `.data/input/` with Jenkinsfiles in subdirectories, **When** I run the tool, **Then** all Jenkinsfiles are found recursively and processed alphabetically
+2. **Given** input structure `.data/input/1/Jenkinsfile` and `.data/input/2/Jenkinsfile`, **When** processed, **Then** output mirrors the structure: `.data/output/1/ci.yml` and `.data/output/2/ci.yml`
 
 ---
 

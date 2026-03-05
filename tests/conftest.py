@@ -43,7 +43,7 @@ def tmp_config_dir(tmp_path: Path) -> Path:
     config_data = {
         "version": "1.0.0",
         "max_iterations": 5,
-        "output_dir": "output",
+        "output_dir": ".data/output",
         "verbose": False,
         "llm": {
             "base_url": "http://localhost:1234/v1",

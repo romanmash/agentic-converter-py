@@ -10,7 +10,7 @@
 *.userosscache
 *.sln.docstates
 .DS_STORE
-output/
+.data/
 dist/
 .tmp/
 

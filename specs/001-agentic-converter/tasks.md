@@ -47,7 +47,7 @@
 
 **Goal**: Convert one Jenkinsfile to GitHub Actions YAML via LLM
 
-**Independent Test**: `uv run python src/main.py input/1/Jenkinsfile` creates `output/1/ci.yml`
+**Independent Test**: `uv run python -m src.main .data/input/1/Jenkinsfile` creates `.data/output/1/ci.yml`
 
 ### Tests for User Story 1 ⚠️
 
@@ -62,7 +62,7 @@
 - [ ] T018 [US1] Implement `src/agents/converter.py`: `convert(state, client)` → reads prompt, builds message, calls LLM, updates state
 - [ ] T019 [US1] Wire converter into `main.py`: read Jenkinsfile → init state → call converter → validate YAML → write to output
 - [ ] T020 [US1] Add YAML validation: `yaml.safe_load()` on output, warn if invalid, write anyway
-- [ ] T021 [US1] Test manually: run against `input/1/Jenkinsfile`, verify `output/1/ci.yml`
+- [ ] T021 [US1] Test manually: run against `.data/input/1/Jenkinsfile`, verify `.data/output/1/ci.yml`
 
 **Checkpoint**: Single file conversion works end-to-end — MVP achieved
 
@@ -72,7 +72,7 @@
 
 **Goal**: Reviewer agent evaluates YAML, feedback loop refines output
 
-**Independent Test**: `uv run python src/main.py input/1/Jenkinsfile -v` shows multi-iteration output
+**Independent Test**: `uv run python -m src.main .data/input/1/Jenkinsfile -v` shows multi-iteration output
 
 ### Tests for User Story 2 ⚠️
 
@@ -96,7 +96,7 @@
 
 **Goal**: Process multiple Jenkinsfiles from a directory with output mirroring
 
-**Independent Test**: `uv run python src/main.py input/` creates `output/1/ci.yml` + `output/2/ci.yml`
+**Independent Test**: `uv run python -m src.main .data/input/` creates `.data/output/1/ci.yml` + `.data/output/2/ci.yml`
 
 ### Implementation for User Story 3
 
@@ -104,7 +104,7 @@
 - [ ] T031 [US3] Implement output path mirroring: compute relative path, map to `<output_dir>/<relative>/ci.yml`
 - [ ] T032 [US3] Implement batch orchestration loop in `main.py`: iterate discovered files, run pipeline for each
 - [ ] T033 [US3] Implement exit codes: `sys.exit(0)` all approved, `sys.exit(1)` fatal, `sys.exit(2)` partial
-- [ ] T034 [US3] Test: run `uv run python src/main.py input/` — verify both outputs created
+- [ ] T034 [US3] Test: run `uv run python -m src.main .data/input/` — verify both outputs created
 
 **Checkpoint**: Batch mode works — directory mirroring and exit codes functional
 

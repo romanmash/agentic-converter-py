@@ -31,11 +31,15 @@ cp .env.example .env
 
 # 3. Start LM Studio and load the model
 
-# 4. Convert a single Jenkinsfile
-uv run python src/main.py input/1/Jenkinsfile
+# 4. Place Jenkinsfiles in .data/input/
+mkdir -p .data/input/1
+cp /path/to/your/Jenkinsfile .data/input/1/Jenkinsfile
 
-# 5. Or convert all Jenkinsfiles in a directory
-uv run python src/main.py input/
+# 5. Convert a single Jenkinsfile
+uv run python -m src.main .data/input/1/Jenkinsfile
+
+# 6. Or convert all Jenkinsfiles in a directory
+uv run python -m src.main .data/input/
 ```
 
 ## CLI Reference
@@ -49,7 +53,7 @@ positional arguments:
 options:
   -h, --help               Show this help message and exit
   -V, --version            Show version from config.json
-  -o, --output-dir DIR     Output directory (default: output)
+  -o, --output-dir DIR     Output directory (default: .data/output)
   -n, --max-iterations N   Max converter↔reviewer iterations (default: 5)
   -v, --verbose            Enable verbose output
 ```
@@ -58,13 +62,16 @@ options:
 
 ```bash
 # Single file (positional argument)
-uv run python src/main.py input/1/Jenkinsfile
+uv run python -m src.main .data/input/1/Jenkinsfile
 
-# Batch with custom output and verbose
-uv run python src/main.py input/ -o results/ -n 3 -v
+# Batch with verbose
+uv run python -m src.main .data/input/ -n 3 -v
+
+# Custom output directory
+uv run python -m src.main .data/input/ -o results/
 
 # Check version
-uv run python src/main.py --version
+uv run python -m src.main --version
 ```
 
 ## Configuration
@@ -76,6 +83,15 @@ Three-layer configuration with clear precedence: **CLI > Environment > config.js
 | Defaults | `config.json` | App behavior (version, max_iterations, output_dir) |
 | Secrets | `.env` | LLM connection (LLM_BASE_URL, LLM_API_KEY, LLM_MODEL) |
 | Overrides | CLI args | Per-run overrides (-n, -o, -v) |
+
+### Working Data
+
+All runtime data lives in `.data/` (gitignored):
+
+| Directory | Purpose |
+|---|---|
+| `.data/input/` | Place Jenkinsfiles here for conversion |
+| `.data/output/` | Generated GitHub Actions YAML (created automatically) |
 
 ## Architecture
 

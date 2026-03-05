@@ -1,3 +1,8 @@
+"""AgenticConverter CLI entry point.
+
+ALL file I/O lives here — agents receive and return in-memory data only.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -6,8 +11,8 @@ from pathlib import Path
 
 import yaml
 
-from src.config.manager import AppConfig, load_config, merge_with_cli
-from src.graph.pipeline import PipelineState, PipelineStatus, run_pipeline
+from src.config.manager import load_config, merge_with_cli
+from src.graph.pipeline import PipelineStatus, run_pipeline
 from src.llm.client import LLMClient
 
 
@@ -25,9 +30,9 @@ def build_parser(version: str) -> argparse.ArgumentParser:
         description="Convert Jenkinsfiles to GitHub Actions workflow YAML using a local LLM.",
         epilog=(
             "Examples:\n"
-            "  uv run python src/main.py input/1/Jenkinsfile\n"
-            "  uv run python src/main.py input/ -o results/ -n 3 -v\n"
-            "  uv run python src/main.py --version"
+            "  uv run python -m src.main .data/input/1/Jenkinsfile\n"
+            "  uv run python -m src.main .data/input/ -n 3 -v\n"
+            "  uv run python -m src.main --version"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

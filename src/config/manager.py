@@ -7,13 +7,12 @@ with clear precedence: CLI > Environment > config.json.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-
-import os
 
 
 # --- Models ---
@@ -32,7 +31,7 @@ class AppConfig(BaseModel):
 
     version: str = "1.0.0"
     max_iterations: int = Field(default=5, ge=1, le=20)
-    output_dir: str = "output"
+    output_dir: str = ".data/output"
     verbose: bool = False
     llm: LLMConfig = Field(default_factory=LLMConfig)
 

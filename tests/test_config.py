@@ -24,7 +24,7 @@ class TestDefaults:
         config = AppConfig()
         assert config.version == "1.0.0"
         assert config.max_iterations == 5
-        assert config.output_dir == "output"
+        assert config.output_dir == ".data/output"
         assert config.verbose is False
 
     def test_default_llm_config(self) -> None:
@@ -92,14 +92,14 @@ class TestEnvOverrides:
 
         # Non-LLM settings should still come from config.json
         assert config.max_iterations == 5
-        assert config.output_dir == "output"
+        assert config.output_dir == ".data/output"
 
 
 class TestCLIPrecedence:
     """Test that CLI arguments override everything."""
 
     def test_cli_overrides_config(self) -> None:
-        config = AppConfig(max_iterations=5, output_dir="output", verbose=False)
+        config = AppConfig(max_iterations=5, output_dir=".data/output", verbose=False)
 
         merged = merge_with_cli(
             config,
@@ -119,7 +119,7 @@ class TestCLIPrecedence:
         )
 
         assert merged.max_iterations == 5
-        assert merged.output_dir == "output"
+        assert merged.output_dir == ".data/output"
 
     def test_cli_partial_override(self) -> None:
         config = AppConfig(max_iterations=5, output_dir="original")
@@ -142,4 +142,4 @@ class TestCLIPrecedence:
         # Env wins for LLM settings
         assert merged.llm.base_url == "http://env-override:9999/v1"
         # config.json wins for non-overridden
-        assert merged.output_dir == "output"
+        assert merged.output_dir == ".data/output"

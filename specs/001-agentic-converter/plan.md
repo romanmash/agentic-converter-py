@@ -82,11 +82,11 @@ CONTRIBUTING.md              # Conventional commits, workflow
 constitution.md              # Project principles
 .editorconfig                # Editor formatting rules
 
-input/                       # Sample Jenkinsfiles (committed)
-├── 1/Jenkinsfile
-└── 2/Jenkinsfile
-
-output/                      # Generated YAML (gitignored, created at runtime)
+.data/                       # Working data (gitignored)
+├── input/                   # User places Jenkinsfiles here
+│   ├── 1/Jenkinsfile
+│   └── 2/Jenkinsfile
+└── output/                  # Generated YAML (created at runtime)
 
 docs/
 └── TASK.md                  # Original customer requirements (read-only)
