@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "max_iterations": 5,
+  "output_dir": "output",
+  "verbose": false,
+  "llm": {
+    "base_url": "http://localhost:1234/v1",
+    "api_key": "lm-studio",
+    "model": "qwen2.5-coder-14b-instruct"
+  }
+}
