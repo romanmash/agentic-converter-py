@@ -1,9 +1,3 @@
-"""AgenticConverter CLI entry point.
-
-ALL file I/O lives here — agents receive and return in-memory data only.
-Implements argparse with positional + named options.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -12,9 +6,8 @@ from pathlib import Path
 
 import yaml
 
-from src.agents.converter import convert
 from src.config.manager import AppConfig, load_config, merge_with_cli
-from src.graph.pipeline import PipelineState, PipelineStatus
+from src.graph.pipeline import PipelineState, PipelineStatus, run_pipeline
 from src.llm.client import LLMClient
 
 
@@ -120,12 +113,14 @@ def main() -> None:
         # Read Jenkinsfile (I/O here only)
         jenkinsfile_content = jf_path.read_text(encoding="utf-8")
 
-        # Init state
-        state = PipelineState(jenkinsfile=jenkinsfile_content)
-
-        # Run converter (single pass for now — Phase 4 adds the full loop)
+        # Run the full agentic loop
         try:
-            state = convert(state, client)
+            state = run_pipeline(
+                jenkinsfile=jenkinsfile_content,
+                client=client,
+                max_iterations=config.max_iterations,
+                verbose=config.verbose,
+            )
         except Exception as e:
             print(f"❌ Error converting {jf_path}: {e}", file=sys.stderr)
             results.append(PipelineStatus.ERROR)
@@ -150,8 +145,8 @@ def main() -> None:
         # Write output (I/O here only)
         output_file.write_text(state.workflow_yaml, encoding="utf-8")
 
-        if config.verbose:
-            print(f"   ✅ Written: {output_file} (iteration {state.iteration})")
+        status_emoji = "✅" if state.status == PipelineStatus.APPROVED else "⚠️"
+        print(f"  {status_emoji} {output_file} ({state.status.value}, {state.iteration} iteration(s))")
 
         results.append(state.status)
 
