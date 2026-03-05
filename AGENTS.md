@@ -41,11 +41,11 @@ uv run pytest -v        # Verbose output
 | `constitution.md` | Project principles | Read-only |
 | `config.json` | App defaults (version, iterations) | Update version on release |
 | `specs/001-agentic-converter/` | Feature spec, plan, tasks | Reference only |
-| `docs/TASK.md` | Original customer requirements | Never modify |
+| `docs/CASE.md` | Original customer case brief | Never modify |
 | `src/prompts/*.md` | LLM system prompts | Iterate freely |
 
 ## Safety
 
-- This tool runs **locally only** — no external network calls
+- The tool itself makes **no direct external network calls** — it communicates only with a local OpenAI-compatible endpoint (which may proxy to remote providers)
 - `.env` contains secrets — never commit it
 - `.data/` is gitignored — working data only (input Jenkinsfiles + output YAML)

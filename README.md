@@ -4,20 +4,25 @@
 
 ## Overview
 
-AgenticConverter reads a Jenkinsfile (or a directory of Jenkinsfiles), sends it to a locally-hosted LLM, and produces GitHub Actions YAML. A **reviewer agent** evaluates the output and iterates with the converter until the result is approved or a max iteration count is reached.
+AgenticConverter reads a Jenkinsfile (or a directory of Jenkinsfiles), sends it to a locally-hosted LLM, and produces GitHub Actions YAML. A **reviewer agent** evaluates the output and iterates with the converter until the result is approved or a max iteration count is reached. A **conversion report** (`report.md`) is generated alongside each output, providing confidence scoring and a manual verification checklist.
 
+```mermaid
+flowchart LR
+    A[Jenkinsfile] --> B[Converter Agent]
+    B --> C[YAML]
+    C --> D[Reviewer Agent]
+    D -->|Approved| E[ci.yml + report.md]
+    D -->|Feedback| B
 ```
-Jenkinsfile → [Converter Agent] → YAML → [Reviewer Agent] → APPROVED ✅
-                    ↑                            │
-                    └── feedback (if needed) ─────┘
-```
+
+> For a comprehensive architectural walkthrough, design rationale, and pitch presentation, see [docs/PITCH.md](docs/PITCH.md).
 
 ## Prerequisites
 
 - **Python 3.10+**
 - **[uv](https://docs.astral.sh/uv/)** — Python package manager
-- **[LM Studio](https://lmstudio.ai/)** — local LLM server (OpenAI-compatible API)
-- **Qwen2.5-Coder-14B** (Q4_K_M quantization) loaded in LM Studio (~8.7 GB VRAM)
+- **Local LLM Server** — e.g., [LM Studio](https://lmstudio.ai/) or [LightLLM](https://github.com/ModelTC/lightllm) (for remote proxying) exposing an OpenAI-compatible API.
+  > *Example:* A local model like `Qwen2.5-Coder` works well for this PoC.
 
 ## Quick Start
 
@@ -29,7 +34,7 @@ uv sync
 cp .env.example .env
 # Edit .env with your LM Studio URL (default: http://localhost:1234/v1)
 
-# 3. Start LM Studio and load the model
+# 3. Start your LLM server (e.g., LM Studio) and load a code model
 
 # 4. Place Jenkinsfiles in .data/input/
 mkdir -p .data/input/1
@@ -93,45 +98,49 @@ All runtime data lives in `.data/` (gitignored):
 | `.data/input/` | Place Jenkinsfiles here for conversion |
 | `.data/output/` | Generated GitHub Actions YAML + conversion reports |
 
-## Architecture
+## Repository Structure
 
 ```
-src/
-├── main.py              # CLI + ALL file I/O (Clean Architecture boundary)
-├── config/manager.py    # Config loading and merging
-├── agents/
-│   ├── converter.py     # Jenkinsfile → YAML via LLM
-│   └── reviewer.py      # Evaluates YAML, returns APPROVED/CHANGES_NEEDED
-├── graph/pipeline.py    # PipelineState + orchestration loop
-├── report/generator.py  # Conversion report generation (confidence, checklist)
-├── llm/client.py        # OpenAI SDK wrapper (Dependency Injection)
-└── prompts/             # System prompts as Markdown (iterate without code changes)
+AgenticConverter/
+├── src/
+│   ├── main.py              # CLI entry point + ALL file I/O
+│   ├── config/manager.py    # 3-layer config loading and merging
+│   ├── agents/
+│   │   ├── converter.py     # Jenkinsfile → YAML via LLM
+│   │   └── reviewer.py      # Evaluates YAML, returns APPROVED/CHANGES_NEEDED
+│   ├── graph/pipeline.py    # PipelineState model + agentic orchestration loop
+│   ├── report/generator.py  # Conversion report (confidence, checklist, history)
+│   ├── llm/client.py        # OpenAI SDK wrapper (Dependency Injection)
+│   └── prompts/             # System prompts as Markdown files
+├── tests/                   # pytest suite (runs offline, no LLM needed)
+├── specs/                   # Feature specifications (Spec Kit methodology)
+│   ├── 001-agentic-converter/
+│   └── 002-conversion-report/
+├── docs/
+│   ├── CASE.md              # Original customer case brief
+│   └── PITCH.md             # Pitch presentation (architecture, rationale, diagrams)
+├── config.json              # App defaults
+├── constitution.md          # Project principles
+├── CHANGELOG.md             # Version history
+├── CONTRIBUTING.md          # Contribution guidelines
+└── LICENSE                  # MIT License
 ```
-
-**Key principles** (see [constitution.md](constitution.md)):
-- All I/O in `main.py` — agents are pure functions
-- Dependencies injected, not instantiated
-- Tests run offline (mocked LLM client)
 
 ## Testing
 
 ```bash
-uv run pytest           # All tests (no LM Studio needed)
+uv run pytest           # All 43 tests (no LM Studio needed)
 uv run pytest -v        # Verbose
 ```
 
-## Documentation Structure
+## Documentation
 
 Each piece of information lives in exactly **one place**:
 
 | What | Where |
 |---|---|
 | Project principles | [constitution.md](constitution.md) |
-| Requirements (user stories, FRs) | [specs/001-agentic-converter/spec.md](specs/001-agentic-converter/spec.md) |
+| Feature requirements | [specs/001-agentic-converter/spec.md](specs/001-agentic-converter/spec.md) |
 | Technical design | [specs/001-agentic-converter/plan.md](specs/001-agentic-converter/plan.md) |
-| Task breakdown | [specs/001-agentic-converter/tasks.md](specs/001-agentic-converter/tasks.md) |
-| Original customer brief | [docs/TASK.md](docs/TASK.md) |
-
-## License
-
-[MIT](LICENSE)
+| Pitch & architecture | [docs/PITCH.md](docs/PITCH.md) |
+| Original customer brief | [docs/CASE.md](docs/CASE.md) |

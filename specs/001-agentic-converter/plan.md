@@ -5,7 +5,7 @@
 
 ## Summary
 
-Build a CLI tool that converts Jenkinsfiles to GitHub Actions YAML using a local LLM (Qwen2.5-Coder-14B via LM Studio). The core architecture is a 2-agent iterative loop (converter→reviewer) implemented in raw Python with the OpenAI SDK. Supports single-file and batch directory processing with output mirroring.
+Build a CLI tool that converts Jenkinsfiles to GitHub Actions YAML using a local LLM. The core architecture is a 2-agent iterative loop (converter→reviewer) implemented in raw Python with the OpenAI SDK. Supports single-file and batch directory processing with output mirroring.
 
 ## Technical Context
 
@@ -14,10 +14,10 @@ Build a CLI tool that converts Jenkinsfiles to GitHub Actions YAML using a local
 **Primary Dependencies**: openai (LLM communication), pyyaml (YAML parsing), pydantic (data validation), python-dotenv (.env loading)
 **Storage**: Local file system only
 **Testing**: pytest (with mocked LLM client — no live inference needed)
-**Target Platform**: Windows 11 with 12 GB GPU VRAM
+**Target Platform**: Any system running an OpenAI-compatible local proxy (e.g., LM Studio, LightLLM).
 **Project Type**: CLI tool
 **Performance Goals**: < 5 minutes per Jenkinsfile conversion (including all iterations)
-**Constraints**: 12 GB VRAM (Qwen2.5-Coder-14B Q4_K_M uses ~8.7 GB), no external network calls
+**Constraints**: Execution is performed entirely locally — no external network calls or cloud API dependencies.
 **Scale/Scope**: 2 sample Jenkinsfiles, ~500 lines of application code
 
 ## Constitution Check
@@ -89,7 +89,7 @@ constitution.md              # Project principles
 └── output/                  # Generated YAML (created at runtime)
 
 docs/
-└── TASK.md                  # Original customer requirements (read-only)
+└── CASE.md                  # Original customer case brief (read-only)
 ```
 
 **Structure Decision**: Single-project CLI layout. `src/` for application code, `tests/` at root. Prompts stored as Markdown files alongside code for easy iteration without code changes.
@@ -100,9 +100,9 @@ docs/
 
 A purpose-built 2-agent loop in ~150 lines of plain Python. LangGraph, CrewAI, and LangChain were considered but rejected as over-engineered for a 2-node graph. See `.tmp/research/FRAMEWORK_ANALYSIS.md` for full analysis.
 
-### LLM Model: Qwen2.5-Coder-14B (Q4_K_M)
+### LLM Model Agnostic
 
-Selected for best code-generation benchmarks within the 12 GB VRAM constraint (~8.7 GB used). Qwen2.5-Coder-7B is the fallback (~5 GB).
+The agentic pipeline is designed to work with any capable coding model served via an OpenAI-compatible API. We recommend Local/Proxy solutions like **LM Studio** or **LightLLM**. The system prompts focus strictly on syntax/conversion guidelines, ensuring broad compatibility across LLMs.
 
 ### State Model: Pydantic BaseModel
 

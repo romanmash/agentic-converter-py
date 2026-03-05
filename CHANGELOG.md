@@ -5,7 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
 
 ## [1.1.0] - 2026-03-05
 
@@ -17,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Manual Verification Checklist (11 items) for common Jenkins→GHA issues
 - Confidence level: HIGH (≤2 iter) / MEDIUM (3-4 iter) / LOW (max iter)
 - Embedded generated YAML in report for self-contained reference
-- Reviewer feedback section showing last iteration's feedback
+- Reviewer feedback integrated as Comment column in iteration history table
 - `IterationRecord` model for tracking pipeline history
 
 ## [1.0.0] - 2026-03-05

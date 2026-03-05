@@ -24,8 +24,7 @@ MAJOR.MINOR.PATCH format. Version defined in `config.json` only. Exposed via `--
 
 - **Language**: Python 3.10+
 - **Package Manager**: `uv`
-- **LLM**: Qwen2.5-Coder-14B (Q4_K_M) — must fit within 12 GB VRAM
-- **LLM Server**: LM Studio (OpenAI-compatible API at `localhost:1234`)
+- **LLM Context**: The LLM must be accessible via an OpenAI-compatible endpoint (e.g., LM Studio, LightLLM).
 - **CLI**: `argparse` (stdlib)
 - **Testing**: `pytest`
 
