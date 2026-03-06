@@ -149,15 +149,3 @@ AgenticConverter/
 uv run pytest           # All tests (no LM Studio needed)
 uv run pytest -v        # Verbose
 ```
-
-## Documentation
-
-Each piece of information lives in exactly **one place**:
-
-| What | Where |
-|---|---|
-| Project principles | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Feature requirements | [specs/001-agentic-converter/spec.md](specs/001-agentic-converter/spec.md) |
-| Technical design | [specs/001-agentic-converter/plan.md](specs/001-agentic-converter/plan.md) |
-| Pitch & architecture | [docs/PITCH.md](docs/PITCH.md) |
-| Original customer brief | [docs/CASE.md](docs/CASE.md) |
