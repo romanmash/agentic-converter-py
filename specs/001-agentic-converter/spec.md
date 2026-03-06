@@ -59,14 +59,14 @@ As a developer, I want a clear `--help` command and a config file so that I can 
 
 **Why this priority**: Essential for usability but not core conversion logic.
 
-**Independent Test**: Run `--help` and `--version` and verify output. Modify `config.json` and verify defaults change.
+**Independent Test**: Run `--help` and `--version` and verify output. Modify `config/config.json` and verify runtime defaults change.
 
 **Acceptance Scenarios**:
 
 1. **Given** the tool is installed, **When** I run `--help`, **Then** I see dual-mode usage (positional + named options), all flags, and examples
-2. **Given** the tool is installed, **When** I run `--version`, **Then** I see the version from `config.json` (e.g., `1.0.0`)
-3. **Given** `config.json` sets `max_iterations: 3`, **When** I run without `-n`, **Then** the loop uses 3 iterations
-4. **Given** I pass `-n 10` on the CLI, **When** `config.json` says 5, **Then** CLI wins (precedence: CLI > Env > Config)
+2. **Given** the tool is installed, **When** I run `--version`, **Then** I see the version from `pyproject.toml` (e.g., `1.0.0`)
+3. **Given** `config/config.json` sets `max_iterations: 3`, **When** I run without `-n`, **Then** the loop uses 3 iterations
+4. **Given** I pass `-n 10` on the CLI, **When** `config/config.json` says 5, **Then** CLI wins (precedence: CLI > config/config.local.json > Config)
 
 ---
 
@@ -114,16 +114,16 @@ As a team lead, I want professional documentation so that new team members can u
 - **FR-016**: System MUST find Jenkinsfiles recursively and process alphabetically when given a directory
 - **FR-017**: System MUST mirror input folder structure in output directory
 - **FR-018**: System MUST map Jenkins constructs to GHA equivalents (agent, stages, parallel, post, when, env)
-- **FR-019**: System MUST read defaults from `config.json`
-- **FR-020**: System MUST read secrets from `.env`
-- **FR-021**: System MUST enforce precedence: CLI > Env > Config File
-- **FR-022**: Application version MUST be in `config.json` (no hardcoded versions)
+- **FR-019**: System MUST read defaults from `config/config.json`
+- **FR-020**: System MUST read machine-local overrides from `config/config.local.json` when present
+- **FR-021**: System MUST enforce precedence: CLI > config/config.local.json > Config File
+- **FR-022**: Application version MUST be in `pyproject.toml` (no hardcoded versions)
 - **FR-023**: Project MUST maintain `README.md` and `CHANGELOG.md`
 
 ### Key Entities
 
 - **PipelineState**: Core state model passed through the agentic loop — contains `jenkinsfile`, `workflow_yaml`, `review_feedback`, `iteration`, `status`
-- **AppConfig**: Merged configuration from all sources — contains `version`, `max_iterations`, `output_dir`, `verbose`, `llm` settings
+- **AppConfig**: Merged configuration from all sources — contains `max_iterations`, `output_dir`, `verbose`, `llm` settings
 
 ## Success Criteria *(mandatory)*
 
@@ -135,4 +135,4 @@ As a team lead, I want professional documentation so that new team members can u
 - **SC-004**: Total execution time per Jenkinsfile is under 5 minutes
 - **SC-005**: Codebase is under 500 lines of application code (excluding prompts)
 - **SC-006**: All `pytest` tests pass without LM Studio running
-- **SC-007**: Configuration precedence works correctly (CLI > Env > Config)
+- **SC-007**: Configuration precedence works correctly (CLI > config/config.local.json > Config)

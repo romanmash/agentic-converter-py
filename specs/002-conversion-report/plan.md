@@ -53,6 +53,5 @@ tests/
 
 ## Version Bump
 
-- `config.json`: `1.0.0` → `1.1.0`
 - `CHANGELOG.md`: New entry under `[1.1.0]`
 - `pyproject.toml`: `1.0.0` → `1.1.0`

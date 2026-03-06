@@ -21,7 +21,7 @@ flowchart LR
 
 - **Python 3.10+**
 - **[uv](https://docs.astral.sh/uv/)** — Python package manager
-- **Local LLM Server** — e.g., [LM Studio](https://lmstudio.ai/) or [LightLLM](https://github.com/ModelTC/lightllm) (for remote proxying) exposing an OpenAI-compatible API.
+- **Local LLM Server** — e.g., [LM Studio](https://lmstudio.ai/) or [LightLLM](https://github.com/ModelTC/lightllm) exposing an OpenAI-compatible API.
   > *Example:* A local model like `Qwen2.5-Coder` works well for this PoC.
 
 ## Quick Start
@@ -30,9 +30,9 @@ flowchart LR
 # 1. Install dependencies
 uv sync
 
-# 2. Configure LLM connection
-cp .env.example .env
-# Edit .env with your LM Studio URL (default: http://localhost:1234/v1)
+# 2. (Optional) Add local overrides
+cp config/config.local.example.json config/config.local.json
+# Edit config/config.local.json as needed (e.g., output_dir)
 
 # 3. Start your LLM server (e.g., LM Studio) and load a code model
 
@@ -50,17 +50,18 @@ uv run python -m src.main .data/input/
 ## CLI Reference
 
 ```
-usage: main.py [-h] [-V] [-o DIR] [-n N] [-v] path
+usage: agentic-converter [-h] [-V] [-o DIR] [-n N] [-v] path
 
 positional arguments:
-  path                     Jenkinsfile or directory containing Jenkinsfiles
+  path                  Jenkinsfile or directory containing Jenkinsfiles
 
 options:
-  -h, --help               Show this help message and exit
-  -V, --version            Show version from config.json
-  -o, --output-dir DIR     Output directory (default: .data/output)
-  -n, --max-iterations N   Max converter↔reviewer iterations (default: 5)
-  -v, --verbose            Enable verbose output
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -o, --output-dir DIR  Output directory (default: from config/config.json)
+  -n, --max-iterations N
+                        Max converter↔reviewer iterations (default: from config/config.json)
+  -v, --verbose         Enable verbose output
 ```
 
 ### Examples
@@ -81,13 +82,15 @@ uv run python -m src.main --version
 
 ## Configuration
 
-Three-layer configuration with clear precedence: **CLI > Environment > config.json**
+Three-layer configuration with clear precedence: **CLI > config/config.local.json > config/config.json**
 
 | Layer | File | Purpose |
 |---|---|---|
-| Defaults | `config.json` | App behavior (version, max_iterations, output_dir) |
-| Environment | `.env` | Optional overrides for all defaults except `version` (MAX_ITERATIONS, OUTPUT_DIR, VERBOSE, LLM_*) |
+| Defaults | `config/config.json` | App behavior (max_iterations, output_dir, verbose, LLM settings) |
+| Local Overrides | `config/config.local.json` | Optional machine-specific non-secret overrides (gitignored recommended) |
 | Overrides | CLI args | Per-run overrides (-n, -o, -v) |
+
+Use `config/config.local.json` for machine-specific overrides you want outside git. Keep long-term defaults in `config/config.json`.
 
 ### Working Data
 
@@ -102,9 +105,13 @@ All runtime data lives in `.data/` (gitignored):
 
 ```
 AgenticConverter/
+├── config/
+│   ├── config.json               # App defaults (single source of truth)
+│   ├── config.local.example.json # Optional local override template
+│   └── config.local.json         # Optional local overrides (gitignored)
 ├── src/
 │   ├── main.py              # CLI entry point + ALL file I/O
-│   ├── config/manager.py    # 3-layer config loading and merging
+│   ├── config/manager.py    # config/config.json + config/config.local.json loading and merging
 │   ├── agents/
 │   │   ├── converter.py     # Jenkinsfile → YAML via LLM
 │   │   └── reviewer.py      # Evaluates YAML, returns APPROVED/CHANGES_NEEDED
@@ -115,21 +122,31 @@ AgenticConverter/
 ├── tests/                   # pytest suite (runs offline, no LLM needed)
 ├── specs/                   # Feature specifications (Spec Kit methodology)
 │   ├── 001-agentic-converter/
-│   └── 002-conversion-report/
+│   ├── 002-conversion-report/
+│   ├── 003-agent-specific-parameters/
+│   ├── 004-file-only-configuration/
+│   ├── 005-io-boundary-hardening/
+│   └── 006-docs-runtime-parity/
 ├── docs/
 │   ├── CASE.md              # Original customer case brief
 │   └── PITCH.md             # Pitch presentation (architecture, rationale, diagrams)
-├── config.json              # App defaults
-├── constitution.md          # Project principles
+├── .data/                   # Runtime inputs/outputs (gitignored)
+├── .tmp/                    # Research/work artifacts (gitignored)
+├── .venv/                   # Local virtual environment (optional, local)
 ├── CHANGELOG.md             # Version history
 ├── CONTRIBUTING.md          # Contribution guidelines
+├── AGENTS.md                # AI assistant collaboration rules
+├── pyproject.toml           # Project metadata + dependencies
+├── uv.lock                  # Locked dependency graph
+├── .gitignore               # Ignore rules
+├── .editorconfig            # Editor defaults
 └── LICENSE                  # MIT License
 ```
 
 ## Testing
 
 ```bash
-uv run pytest           # All 43 tests (no LM Studio needed)
+uv run pytest           # All tests (no LM Studio needed)
 uv run pytest -v        # Verbose
 ```
 
@@ -139,7 +156,7 @@ Each piece of information lives in exactly **one place**:
 
 | What | Where |
 |---|---|
-| Project principles | [constitution.md](constitution.md) |
+| Project principles | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Feature requirements | [specs/001-agentic-converter/spec.md](specs/001-agentic-converter/spec.md) |
 | Technical design | [specs/001-agentic-converter/plan.md](specs/001-agentic-converter/plan.md) |
 | Pitch & architecture | [docs/PITCH.md](docs/PITCH.md) |

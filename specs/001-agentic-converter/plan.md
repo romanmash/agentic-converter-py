@@ -11,7 +11,7 @@ Build a CLI tool that converts Jenkinsfiles to GitHub Actions YAML using a local
 
 **Language/Version**: Python 3.10+
 **Package Manager**: uv
-**Primary Dependencies**: openai (LLM communication), pyyaml (YAML parsing), pydantic (data validation), python-dotenv (.env loading)
+**Primary Dependencies**: openai (LLM communication), pyyaml (YAML parsing), pydantic (data validation)
 **Storage**: Local file system only
 **Testing**: pytest (with mocked LLM client — no live inference needed)
 **Target Platform**: Any system running an OpenAI-compatible local proxy (e.g., LM Studio, LightLLM).
@@ -26,10 +26,10 @@ Build a CLI tool that converts Jenkinsfiles to GitHub Actions YAML using a local
 
 - [x] Local-only execution? — Yes, LM Studio at localhost:1234
 - [x] Clean Architecture? — DI for LLM client, I/O only in main.py
-- [x] No hardcoded values? — config.json + .env, version in config
+- [x] No hardcoded values? — config/config.json + config/config.local.json + CLI, version in pyproject.toml
 - [x] Test-first where practical? — pytest for config, CLI, pipeline routing
 - [x] Simplicity? — Raw Python + OpenAI SDK, no heavy framework
-- [x] Versioning? — config.json version field, CHANGELOG.md
+- [x] Versioning? — pyproject.toml version field, CHANGELOG.md
 
 ## Project Structure
 
@@ -71,15 +71,15 @@ tests/
 ├── test_cli.py
 └── test_pipeline.py
 
-config.json                  # Default configuration (includes version)
-.env.example                 # Environment variable template
+config/
+├── config.json              # Default runtime configuration
+└── config.local.example.json # Optional local override template
 pyproject.toml               # Dependencies (managed by uv)
 README.md                    # User documentation
 CHANGELOG.md                 # Version history
 LICENSE                      # MIT License
 AGENTS.md                    # AI assistant instructions
-CONTRIBUTING.md              # Conventional commits, workflow
-constitution.md              # Project principles
+CONTRIBUTING.md              # Workflow + project principles
 .editorconfig                # Editor formatting rules
 
 .data/                       # Working data (gitignored)
@@ -114,7 +114,7 @@ Positional argument for quick use, named options with short aliases for control.
 
 ### Configuration Precedence
 
-CLI Arguments > Environment Variables (.env) > config.json defaults. Three layers with clean merge logic.
+CLI Arguments > config/config.local.json > config/config.json defaults. Three layers with clean merge logic.
 
 ### Exit Codes
 

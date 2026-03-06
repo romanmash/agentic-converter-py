@@ -31,7 +31,7 @@
 
 ## Phase 5: Version & Documentation
 
-- [ ] T058 Bump version: `config.json`, `pyproject.toml` → `1.1.0`
+- [ ] T058 Bump version: `pyproject.toml` → `1.1.0`
 - [ ] T059 Update `CHANGELOG.md`: add `[1.1.0]` entry
 - [ ] T060 Update `README.md`: document report feature
 - [ ] T061 Commit: `feat(report): add conversion report generation (v1.1.0)`

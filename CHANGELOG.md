@@ -2,10 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/),
-and this project adheres to [Semantic Versioning](https://semver.org/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.3.0] - 2026-03-06
+
+### Changed
+
+- Simplified configuration model to file-only precedence: CLI > `config/config.local.json` > `config/config.json`
+- Removed `.env` loading and environment variable overrides from runtime configuration
+- Moved configuration files into root `config/` directory
+- Added `config/config.local.example.json` template for local output path override demonstration
+- Updated documentation and tests to reflect the file-only configuration approach
+
+## [1.2.1] - 2026-03-05
+
+### Changed
+
+- `--version` now reads version from `pyproject.toml` (single source of truth)
+- `config.json` no longer stores a duplicate version field
+- Configuration layering formalized and documented as: CLI > `.env` > `config.local.json` > `config.json`
+- Project principles consolidated into `CONTRIBUTING.md`; removed non-standard root `CONSTITUTION.md`
 
 ## [1.2.0] - 2026-03-05
 

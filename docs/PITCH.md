@@ -59,7 +59,7 @@ flowchart LR
 | Module | Responsibility | Key Design Trait |
 |---|---|---|
 | `main.py` | CLI argument parsing, file reads/writes, orchestration entry point | **Only module with side-effects** (Clean Architecture I/O boundary) |
-| `config/manager.py` | Loads and merges configuration from 3 layers (config.json → .env → CLI) | Three-layer precedence chain |
+| `config/manager.py` | Loads and merges configuration from 3 layers (config/config.json → config/config.local.json → CLI) | Three-layer precedence chain |
 | `graph/pipeline.py` | Defines `PipelineState` (Pydantic model), `IterationRecord`, and `run_pipeline()` loop | Immutable state transitions via `model_copy()` |
 | `agents/converter.py` | Builds converter prompt, calls LLM, extracts YAML from response | Pure function: `(state, client, llm_params) → state` |
 | `agents/reviewer.py` | Builds reviewer prompt, calls LLM, parses APPROVED/CHANGES_NEEDED verdict | Pure function: `(state, client, llm_params) → state` |
@@ -186,8 +186,8 @@ The `LLMClient` is instantiated once in `main.py` from `AppConfig` and passed in
 `run_pipeline()`. Agents never create their own clients.
 
 **Benefits**:
-- Tests inject a mock client → 43 tests run in <2s without LM Studio
-- Switch from LM Studio to OpenAI/Anthropic with one config change
+- Tests inject a mock client → test suite runs offline without LM Studio
+- Switch between local OpenAI-compatible endpoints with one config change
 - No global state or singletons
 
 ### 4.3. Prompt Engineering as Configuration
@@ -259,24 +259,28 @@ quadrantChart
     quadrant-3 "Sweet Spot"
     quadrant-4 "Risky"
     "Raw Python + OpenAI SDK": [0.25, 0.15]
-    "LangGraph": [0.65, 0.60]
-    "LangChain": [0.80, 0.85]
+    "LangChain": [0.67, 0.62]
+    "LangGraph": [0.76, 0.66]
 ```
 
-| Criterion | Raw Python | LangGraph | LangChain |
+Reading guide for the chart: the X-axis represents **complexity to adopt for this case** (team onboarding + implementation surface), not theoretical power.
+
+For this assignment (`docs/CASE.md`: "keep it practical and minimal"), Raw Python remains the best fit. LangGraph can feel cleaner for explicit loops after setup, but it is generally a lower-level model and therefore not simpler to adopt for a small two-node PoC.
+
+| Criterion | Raw Python | LangChain | LangGraph |
 |---|---|---|---|
-| Dependencies | 3 packages | 10+ packages | 30+ packages |
-| Debuggability | Full visibility | Moderate (state machine) | Low (hidden prompts) |
-| Learning curve | None | Medium | High |
-| Fit for 2-agent loop | Perfect | Overkill | Wrong pattern |
-| Version stability | Stable | Frequent changes | Frequent breaks |
+| Dependencies | 3 packages | Medium framework surface | Medium-high framework surface |
+| Debuggability | Full visibility | Moderate | High after graph is modeled |
+| Learning curve | Low | Medium | Medium-high (lower-level orchestration model) |
+| Fit for 2-agent loop | Perfect | Good, but broad for this PoC | Good and explicit, but extra setup |
+| Control over loop | Full (manual state machine) | Moderate | Very high (explicit state/edges) |
 
 ### Biggest Advantages
 
 - **Zero Magic**: Every prompt and LLM call is visible and debuggable. When generating
   strict YAML syntax, abstraction layers hide the exact context sent to the LLM.
 - **Minimal Footprint**: Only 3 runtime dependencies (`openai`, `pydantic`, `pyyaml`).
-- **Testability**: 43 tests run offline in <2 seconds. No LLM server needed for CI.
+- **Testability**: Test suite runs offline in <2 seconds. No LLM server needed for CI.
 
 ### Trade-offs
 
@@ -330,7 +334,7 @@ flowchart LR
 
 - **Prompt-as-Configuration**: Non-developers can tune LLM behavior by editing Markdown
   files in `src/prompts/` without writing Python code.
-- **Agnostic AI Gateway**: By configuring the application to point to a local proxy framework (e.g., LightLLM or LM Studio), the system broadly supports both **local models** (preventing data exfiltration) and **remote SaaS providers** (like OpenAI/Anthropic), while allowing the central proxy to securely handle API keys and enterprise routing.
+- **Agnostic AI Gateway**: By configuring the application to point to a local endpoint (e.g., LightLLM or LM Studio), the system can switch between compatible local serving stacks while keeping routing centralized.
 - **Reproducible Environments**: `uv sync` creates an identical virtual environment
   on any machine. No Docker, no containers, no cloud dependencies.
 
@@ -340,7 +344,7 @@ flowchart LR
 
 | Component | Technology | Rationale |
 |---|---|---|
-| Language | Python 3.14 | Ecosystem leader for LLM tooling |
+| Language | Python 3.10+ | Ecosystem leader for LLM tooling |
 | Package Manager | uv | Fast, deterministic, replaces pip+venv |
 | LLM Server | LM Studio / LightLLM | Local, OpenAI-compatible APIs |
 | LLM Model | (Any Code Model) | Agentic loop operates independently of the underlying model |

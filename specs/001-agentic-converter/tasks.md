@@ -17,10 +17,10 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize project with `uv init`, create `pyproject.toml` with dependencies (openai, pyyaml, pydantic, python-dotenv, pytest)
+- [ ] T001 Initialize project with `uv init`, create `pyproject.toml` with dependencies (openai, pyyaml, pydantic, pytest)
 - [ ] T002 Create directory structure: `src/config/`, `src/agents/`, `src/graph/`, `src/llm/`, `src/prompts/`, `tests/` with `__init__.py` files
-- [ ] T003 [P] Create `config.json` with defaults: `version` ("1.0.0"), `max_iterations` (5), `output_dir` ("output"), `verbose` (false), `llm.base_url`, `llm.api_key`, `llm.model`
-- [ ] T004 [P] Create `.env.example` with template: `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`
+- [ ] T003 [P] Create `config/config.json` with runtime defaults: `max_iterations` (5), `output_dir` ("output"), `verbose` (false), `llm.base_url`, `llm.api_key`, `llm.model`
+- [ ] T004 [P] Create `config/config.local.example.json` with optional local override template
 
 ---
 
@@ -30,13 +30,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Implement `src/config/manager.py`: `load_config()` reads `config.json`, loads `.env`, returns Pydantic `AppConfig` model
+- [ ] T005 Implement `src/config/manager.py`: `load_config()` reads `config/config.json` and optional `config/config.local.json`, returns Pydantic `AppConfig` model
 - [ ] T006 Implement config precedence: `merge_with_cli(config, cli_args)` overlays CLI arguments on loaded config
 - [ ] T007 Implement `src/llm/client.py`: `LLMClient` class wrapping `openai.OpenAI(base_url, api_key)` with `chat(system_prompt, user_prompt, temperature)` method
 - [ ] T008 Accept `AppConfig` in `LLMClient.__init__()` for Dependency Injection
 - [ ] T009 Define `PipelineState` as Pydantic `BaseModel` in `src/graph/pipeline.py`: fields `jenkinsfile`, `workflow_yaml`, `review_feedback`, `iteration`, `status`
-- [ ] T010 Create `tests/conftest.py` with shared fixtures: `mock_llm_client`, `tmp_config_dir`, `mock_env`
-- [ ] T011 Write `tests/test_config.py`: test defaults, config.json overrides, env overrides, CLI precedence wins
+- [ ] T010 Create `tests/conftest.py` with shared fixtures: `mock_llm_client`, `tmp_config_dir`
+- [ ] T011 Write `tests/test_config.py`: test defaults, config/config.json overrides, local overrides, CLI precedence wins
 - [ ] T012 Run `uv run pytest tests/test_config.py` — verify 100% pass
 
 **Checkpoint**: Foundation ready — config loads, LLM client instantiates, state model validates
@@ -56,7 +56,7 @@
 ### Implementation for User Story 1
 
 - [ ] T014 [US1] Implement `argparse` setup in `src/main.py`: positional `path`, `-o`, `-n`, `-v`, `-V`, `-h`
-- [ ] T015 [US1] Implement `--version` action reading from `load_config()`
+- [ ] T015 [US1] Implement `--version` action reading from `pyproject.toml`
 - [ ] T016 [US1] Implement input path validation: check exists, exit code 1 if not
 - [ ] T017 [P] [US1] Create `src/prompts/converter.md`: system prompt with role, Jenkins→GHA mapping rules, output-only instruction
 - [ ] T018 [US1] Implement `src/agents/converter.py`: `convert(state, client)` → reads prompt, builds message, calls LLM, updates state
@@ -116,7 +116,7 @@
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T035 [P] [US4] Add to `tests/test_cli.py`: test all flags (`-o`, `-n`, `-v`), test defaults from config.json
+- [ ] T035 [P] [US4] Add to `tests/test_cli.py`: test all flags (`-o`, `-n`, `-v`), test defaults from config/config.json
 
 ### Implementation for User Story 4
 
@@ -136,7 +136,7 @@
 - [ ] T038 [US5] Update `README.md`: verify Quick Start instructions work, update CLI Reference to match actual implementation, add any missing sections
 - [ ] T039 [P] [US5] Update `CHANGELOG.md`: verify all implemented features are listed, update date if needed
 - [ ] T040 [US5] Verify Clean Architecture: audit that `main.py` is the only I/O file, agents are pure functions
-- [ ] T041 [US5] Verify no hardcoded version: search `.py` files, confirm `--version` reads config.json
+- [ ] T041 [US5] Verify no hardcoded version: search `.py` files, confirm `--version` reads pyproject.toml
 - [ ] T042 [US5] Final validation: run all acceptance scenarios from spec.md
 
 **Checkpoint**: Project complete — documentation, tests, and all acceptance criteria satisfied
