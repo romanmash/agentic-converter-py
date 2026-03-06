@@ -8,7 +8,6 @@ manual verification checklist.
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 from src.graph.pipeline import PipelineState, PipelineStatus
 
@@ -57,6 +56,11 @@ def _status_emoji(status: PipelineStatus) -> str:
     }.get(status, "❓")
 
 
+def _escape_table_cell(value: str) -> str:
+    """Escape markdown table delimiters in cell content."""
+    return value.replace("|", r"\|")
+
+
 def generate_report(
     state: PipelineState,
     source_path: str,
@@ -103,8 +107,11 @@ def generate_report(
         lines.append("| # | Action | Result | Comment |")
         lines.append("|---|---|---|---|")
         for record in state.history:
+            action = _escape_table_cell(record.action.capitalize())
+            result = _escape_table_cell(record.result)
+            comment = _escape_table_cell(record.comment)
             lines.append(
-                f"| {record.iteration} | {record.action.capitalize()} | {record.result} | {record.comment} |"
+                f"| {record.iteration} | {action} | {result} | {comment} |"
             )
     else:
         lines.append("*No iteration history recorded.*")

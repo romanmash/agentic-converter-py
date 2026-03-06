@@ -3,7 +3,7 @@
 Tests cover:
 - Default values when no config file exists
 - config.json overrides defaults
-- Environment variables override config.json
+- config.local.json overrides config.json
 - CLI arguments override everything
 """
 
@@ -23,7 +23,6 @@ class TestDefaults:
     def test_max_iterations_validation(self) -> None:
         with pytest.raises(ValueError):
             AppConfig(
-                version="1.2.0",
                 max_iterations=0, 
                 output_dir="foo", 
                 verbose=False,
@@ -35,7 +34,6 @@ class TestDefaults:
             )
         with pytest.raises(ValueError):
             AppConfig(
-                version="1.2.0",
                 max_iterations=21,
                 output_dir="foo",
                 verbose=False,
@@ -52,7 +50,6 @@ class TestConfigJsonOverrides:
 
     def test_load_from_config_json(self, tmp_path: Path) -> None:
         config_data = {
-            "version": "2.0.0",
             "max_iterations": 3,
             "output_dir": "custom_output",
             "verbose": True,
@@ -79,7 +76,6 @@ class TestConfigJsonOverrides:
 
         config = load_config(config_path=config_file)
 
-        assert config.version == "2.0.0"
         assert config.max_iterations == 3
         assert config.output_dir == "custom_output"
         assert config.verbose is True
@@ -90,39 +86,52 @@ class TestConfigJsonOverrides:
         with pytest.raises(ValueError):
             load_config(config_path=tmp_path / "nonexistent.json")
 
+    def test_config_local_overrides_and_deep_merges(self, tmp_path: Path) -> None:
+        config_data = {
+            "max_iterations": 5,
+            "output_dir": ".data/output",
+            "verbose": False,
+            "llm": {
+                "base_url": "http://base:1234/v1",
+                "api_key": "base-key",
+                "model": "base-model",
+                "converter": {
+                    "temperature": 0.35,
+                    "max_tokens": 4096,
+                    "top_p": 0.95,
+                    "top_k": 40,
+                },
+                "reviewer": {
+                    "temperature": 0.1,
+                    "max_tokens": 4096,
+                    "top_p": 0.9,
+                    "top_k": 20,
+                },
+            },
+        }
+        local_data = {
+            "max_iterations": 7,
+            "llm": {
+                "model": "local-model",
+                "converter": {
+                    "temperature": 0.5,
+                },
+            },
+        }
+        (tmp_path / "config.json").write_text(json.dumps(config_data), encoding="utf-8")
+        (tmp_path / "config.local.json").write_text(
+            json.dumps(local_data), encoding="utf-8"
+        )
 
-class TestEnvOverrides:
-    """Test that environment variables override config.json."""
+        config = load_config(config_path=tmp_path / "config.json")
 
-    def test_env_overrides_config_json(
-        self, tmp_config_dir: Path, mock_env: None
-    ) -> None:
-        config = load_config(config_path=tmp_config_dir / "config.json")
-
-        assert config.llm.base_url == "http://env-override:9999/v1"
-        assert config.llm.api_key == "env-key"
-        assert config.llm.model == "env-model"
-        
-        # Validate Converter overrides
-        assert config.llm.converter.temperature == 0.9
-        assert config.llm.converter.max_tokens == 4096
-        assert config.llm.converter.top_p == 0.90
-        assert config.llm.converter.top_k == 30
-
-        # Validate Reviewer overrides
-        assert config.llm.reviewer.temperature == 0.1
-        assert config.llm.reviewer.max_tokens == 1024
-        assert config.llm.reviewer.top_p == 1.0
-        assert config.llm.reviewer.top_k == 50
-
-    def test_env_does_not_affect_non_llm_settings(
-        self, tmp_config_dir: Path, mock_env: None
-    ) -> None:
-        config = load_config(config_path=tmp_config_dir / "config.json")
-
-        # Non-LLM settings should still come from config.json
-        assert config.max_iterations == 5
+        assert config.max_iterations == 7
         assert config.output_dir == ".data/output"
+        assert config.llm.model == "local-model"
+        assert config.llm.converter.temperature == 0.5
+        # Deep merge keeps untouched nested values from base config.json.
+        assert config.llm.converter.max_tokens == 4096
+        assert config.llm.reviewer.top_k == 20
 
 
 class TestCLIPrecedence:
@@ -153,17 +162,21 @@ class TestCLIPrecedence:
         assert merged.max_iterations == 8
         assert merged.output_dir == ".data/output"  # Unchanged
 
-    def test_full_precedence_chain(
-        self, tmp_config_dir: Path, mock_env: None
-    ) -> None:
-        """CLI > Env > config.json — the full chain."""
-        # config.json sets max_iterations=5, env sets LLM, CLI overrides iterations
+    def test_full_precedence_chain(self, tmp_config_dir: Path) -> None:
+        """CLI > config.local.json > config.json — the full chain."""
+        local_data = {"max_iterations": 9, "output_dir": "local_output"}
+        (tmp_config_dir / "config.local.json").write_text(
+            json.dumps(local_data), encoding="utf-8"
+        )
+
+        # config.json sets baseline, config.local.json overrides output/iterations,
+        # CLI overrides max_iterations
         config = load_config(config_path=tmp_config_dir / "config.json")
         merged = merge_with_cli(config, {"max_iterations": 15})
 
         # CLI wins for max_iterations
         assert merged.max_iterations == 15
-        # Env wins for LLM settings
-        assert merged.llm.base_url == "http://env-override:9999/v1"
-        # config.json wins for non-overridden
-        assert merged.output_dir == ".data/output"
+        # config.json wins for untouched values
+        assert merged.llm.base_url == "http://localhost:1234/v1"
+        # config.local.json wins for non-overridden values
+        assert merged.output_dir == "local_output"

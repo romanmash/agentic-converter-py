@@ -1,5 +1,4 @@
 {
-  "version": "1.2.0",
   "max_iterations": 5,
   "output_dir": ".data/output",
   "verbose": false,

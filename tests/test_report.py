@@ -124,6 +124,19 @@ class TestReportContent:
         report = generate_report(state, "s", "o")
         assert "| 2 | Review | CHANGES NEEDED | Missing checkout step |" in report
 
+    def test_feedback_with_pipe_is_escaped_in_history_table(self) -> None:
+        history = [
+            IterationRecord(
+                iteration=2,
+                action="review",
+                result="CHANGES NEEDED",
+                comment="Use build | test matrix",
+            )
+        ]
+        state = self._make_state(history=history)
+        report = generate_report(state, "s", "o")
+        assert r"| 2 | Review | CHANGES NEEDED | Use build \| test matrix |" in report
+
 
 class TestReportEdgeCases:
     """Test edge cases in report generation."""

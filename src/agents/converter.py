@@ -6,24 +6,15 @@ by calling the LLM with the converter system prompt.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from src.config.manager import LLMParameters
 from src.graph.pipeline import PipelineState, PipelineStatus
 from src.llm.client import LLMClient
 
-
-# Load prompt once at module level
-_PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "converter.md"
-
-
-def _load_prompt() -> str:
-    """Load the converter system prompt from disk."""
-    return _PROMPT_PATH.read_text(encoding="utf-8")
-
-
 def convert(
-    state: PipelineState, client: LLMClient, llm_params: LLMParameters
+    state: PipelineState,
+    client: LLMClient,
+    llm_params: LLMParameters,
+    system_prompt: str,
 ) -> PipelineState:
     """Convert a Jenkinsfile to GitHub Actions YAML via LLM.
 
@@ -38,8 +29,6 @@ def convert(
     Returns:
         Updated PipelineState with workflow_yaml populated.
     """
-    system_prompt = _load_prompt()
-
     # Build user prompt
     if state.iteration == 0:
         user_prompt = (

@@ -7,7 +7,7 @@ converter↔reviewer agentic loop.
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from pydantic import BaseModel, Field
 
@@ -56,8 +56,10 @@ def run_pipeline(
     client: "LLMClient",
     converter_params: "LLMParameters",
     reviewer_params: "LLMParameters",
+    converter_prompt: str,
+    reviewer_prompt: str,
     max_iterations: int = 5,
-    verbose: bool = False,
+    progress_callback: Optional[Callable[[str], None]] = None,
 ) -> PipelineState:
     """Run the converter↔reviewer agentic loop.
 
@@ -68,8 +70,10 @@ def run_pipeline(
         client: LLM client for API calls.
         converter_params: Converter-scoped LLM parameters.
         reviewer_params: Reviewer-scoped LLM parameters.
+        converter_prompt: Converter system prompt text.
+        reviewer_prompt: Reviewer system prompt text.
         max_iterations: Maximum loop iterations before stopping.
-        verbose: Print progress to console.
+        progress_callback: Optional callback for progress messages.
 
     Returns:
         Final PipelineState with status, workflow_yaml, and history.
@@ -80,14 +84,15 @@ def run_pipeline(
     state = PipelineState(jenkinsfile=jenkinsfile)
 
     for i in range(max_iterations):
-        if verbose:
-            print(f"  🔄 Iteration {i + 1}/{max_iterations}: converting...")
+        if progress_callback is not None:
+            progress_callback(f"  🔄 Iteration {i + 1}/{max_iterations}: converting...")
 
         # Converter pass
         state = convert(
             state=state,
             client=client,
             llm_params=converter_params,
+            system_prompt=converter_prompt,
         )
 
         # Record converter step
@@ -107,14 +112,15 @@ def run_pipeline(
             }
         )
 
-        if verbose:
-            print(f"  🔍 Iteration {i + 1}/{max_iterations}: reviewing...")
+        if progress_callback is not None:
+            progress_callback(f"  🔍 Iteration {i + 1}/{max_iterations}: reviewing...")
 
         # Reviewer pass
         state = review(
             state=state,
             client=client,
             llm_params=reviewer_params,
+            system_prompt=reviewer_prompt,
         )
 
         # Record reviewer step
@@ -143,16 +149,16 @@ def run_pipeline(
         )
 
         if state.status == PipelineStatus.APPROVED:
-            if verbose:
-                print(f"  ✅ Approved on iteration {i + 1}")
+            if progress_callback is not None:
+                progress_callback(f"  ✅ Approved on iteration {i + 1}")
             return state
 
-        if verbose and state.review_feedback:
-            print(f"  ⚠️  Changes needed:\n{state.review_feedback}")
+        if progress_callback is not None and state.review_feedback:
+            progress_callback(f"  ⚠️  Changes needed:\n{state.review_feedback}")
 
     # Max iterations reached
     state = state.model_copy(update={"status": PipelineStatus.MAX_ITERATIONS})
-    if verbose:
-        print(f"  ⏱️  Max iterations ({max_iterations}) reached")
+    if progress_callback is not None:
+        progress_callback(f"  ⏱️  Max iterations ({max_iterations}) reached")
     return state
 

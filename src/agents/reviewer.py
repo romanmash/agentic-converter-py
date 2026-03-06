@@ -6,21 +6,9 @@ Jenkinsfile and returns a structured verdict.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from src.config.manager import LLMParameters
 from src.graph.pipeline import PipelineState, PipelineStatus
 from src.llm.client import LLMClient
-
-
-# Load prompt once at module level
-_PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "reviewer.md"
-
-
-def _load_prompt() -> str:
-    """Load the reviewer system prompt from disk."""
-    return _PROMPT_PATH.read_text(encoding="utf-8")
-
 
 def _parse_verdict(response: str) -> tuple[PipelineStatus, str | None]:
     """Parse the reviewer's structured response.
@@ -54,7 +42,10 @@ def _parse_verdict(response: str) -> tuple[PipelineStatus, str | None]:
 
 
 def review(
-    state: PipelineState, client: LLMClient, llm_params: LLMParameters
+    state: PipelineState,
+    client: LLMClient,
+    llm_params: LLMParameters,
+    system_prompt: str,
 ) -> PipelineState:
     """Review generated YAML against the original Jenkinsfile.
 
@@ -66,8 +57,6 @@ def review(
     Returns:
         Updated PipelineState with status and review_feedback.
     """
-    system_prompt = _load_prompt()
-
     user_prompt = (
         "Review the following GitHub Actions YAML conversion.\n\n"
         f"## Original Jenkinsfile\n```groovy\n{state.jenkinsfile}\n```\n\n"

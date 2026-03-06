@@ -11,17 +11,23 @@ from pathlib import Path
 
 import yaml
 
-from src.config.manager import load_config, merge_with_cli
+from src.config.manager import load_config, load_project_version, merge_with_cli
 from src.graph.pipeline import PipelineStatus, run_pipeline
 from src.llm.client import LLMClient
 from src.report.generator import generate_report
+
+
+def _load_prompt(prompt_name: str) -> str:
+    """Load a system prompt from src/prompts."""
+    prompt_path = Path(__file__).resolve().parent / "prompts" / f"{prompt_name}.md"
+    return prompt_path.read_text(encoding="utf-8")
 
 
 def build_parser(version: str) -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
     Args:
-        version: Application version string from config.
+        version: Application version string from pyproject.toml.
 
     Returns:
         Configured ArgumentParser.
@@ -52,7 +58,7 @@ def build_parser(version: str) -> argparse.ArgumentParser:
         "--output-dir",
         metavar="DIR",
         default=None,
-        help="Output directory (default: from config.json)",
+        help="Output directory (default: from config/config.json)",
     )
     parser.add_argument(
         "-n",
@@ -60,7 +66,7 @@ def build_parser(version: str) -> argparse.ArgumentParser:
         type=int,
         metavar="N",
         default=None,
-        help="Max converter↔reviewer iterations (default: from config.json)",
+        help="Max converter↔reviewer iterations (default: from config/config.json)",
     )
     parser.add_argument(
         "-v",
@@ -74,12 +80,21 @@ def build_parser(version: str) -> argparse.ArgumentParser:
 
 def main() -> None:
     """Main entry point for AgenticConverter."""
-    # Load config first (needed for --version)
-    config = load_config()
-
-    # Parse CLI arguments
-    parser = build_parser(config.version)
+    # Load version from pyproject.toml for --version
+    try:
+        version = load_project_version()
+    except Exception as e:
+        print(f"❌ Error: failed to load project version: {e}", file=sys.stderr)
+        sys.exit(1)
+    parser = build_parser(version)
     args = parser.parse_args()
+
+    # Load runtime configuration after parsing arguments
+    try:
+        config = load_config()
+    except Exception as e:
+        print(f"❌ Error: failed to load configuration: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # Merge CLI overrides into config
     config = merge_with_cli(config, vars(args))
@@ -95,6 +110,14 @@ def main() -> None:
         client = LLMClient(config)
     except Exception as e:
         print(f"❌ Error: failed to initialize LLM client: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Load prompts (I/O boundary)
+    try:
+        converter_prompt = _load_prompt("converter")
+        reviewer_prompt = _load_prompt("reviewer")
+    except Exception as e:
+        print(f"❌ Error: failed to load prompts: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Discover Jenkinsfiles
@@ -126,8 +149,10 @@ def main() -> None:
                 client=client,
                 converter_params=config.llm.converter,
                 reviewer_params=config.llm.reviewer,
+                converter_prompt=converter_prompt,
+                reviewer_prompt=reviewer_prompt,
                 max_iterations=config.max_iterations,
-                verbose=config.verbose,
+                progress_callback=print if config.verbose else None,
             )
         except Exception as e:
             print(f"❌ Error converting {jf_path}: {e}", file=sys.stderr)
@@ -173,17 +198,21 @@ def main() -> None:
     print(f"Processed {len(results)} file(s)")
 
     approved = sum(1 for r in results if r == PipelineStatus.APPROVED)
+    max_iterations = sum(1 for r in results if r == PipelineStatus.MAX_ITERATIONS)
     errors = sum(1 for r in results if r == PipelineStatus.ERROR)
+
+    if approved == len(results):
+        print(f"✅ {len(results)} file(s) converted successfully")
+        sys.exit(0)
 
     if errors == len(results):
         print("❌ All conversions failed")
         sys.exit(1)
-    elif errors > 0:
-        print(f"⚠️  {approved} approved, {errors} failed")
-        sys.exit(2)
-    else:
-        print(f"✅ {len(results)} file(s) converted successfully")
-        sys.exit(0)
+
+    print(
+        f"⚠️  {approved} approved, {max_iterations} max-iterations, {errors} failed"
+    )
+    sys.exit(2)
 
 
 if __name__ == "__main__":

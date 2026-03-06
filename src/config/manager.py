@@ -1,17 +1,16 @@
 """Configuration manager for AgenticConverter.
 
-Loads configuration from config.json, .env, and CLI arguments
-with clear precedence: CLI > Environment > config.json.
+Loads configuration from config/config.json, config/config.local.json, and CLI
+with precedence: CLI > config/config.local.json > config/config.json.
 """
 
 from __future__ import annotations
 
 import json
-import os
+import re
 from pathlib import Path
 from typing import Any, Optional
 
-from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 
@@ -40,7 +39,6 @@ class LLMConfig(BaseModel):
 class AppConfig(BaseModel):
     """Merged application configuration from all sources."""
 
-    version: str
     max_iterations: int = Field(ge=1, le=20)
     output_dir: str
     verbose: bool
@@ -50,83 +48,80 @@ class AppConfig(BaseModel):
 # --- Loaders ---
 
 
-def load_config(config_path: Optional[Path] = None) -> AppConfig:
-    """Load configuration from config.json and .env.
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge override dictionary into base dictionary."""
+    result = dict(base)
+    for key, value in override.items():
+        if (
+            key in result
+            and isinstance(result[key], dict)
+            and isinstance(value, dict)
+        ):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
 
-    1. Read config.json defaults
-    2. Load .env into os.environ
-    3. Override global + LLM settings from environment variables
+
+def load_config(config_path: Optional[Path] = None) -> AppConfig:
+    """Load configuration from config/config.json and optional config/config.local.json.
+
+    1. Read config/config.json defaults
+    2. Overlay optional config/config.local.json values
 
     Args:
-        config_path: Path to config.json. Defaults to project root.
+        config_path: Path to config/config.json. Defaults to project root.
 
     Returns:
         Merged AppConfig instance.
     """
-    # Determine config.json location
+    # Determine config/config.json location
     if config_path is None:
-        config_path = Path(__file__).resolve().parent.parent.parent / "config.json"
+        config_path = (
+            Path(__file__).resolve().parent.parent.parent / "config" / "config.json"
+        )
 
-    # Step 1: Load config.json
+    # Step 1: Load config/config.json
     config_data: dict[str, Any] = {}
     if config_path.exists():
         with open(config_path, "r", encoding="utf-8") as f:
             config_data = json.load(f)
 
-    # Step 2: Load .env (does NOT override existing env vars)
-    env_path = config_path.parent / ".env"
-    load_dotenv(dotenv_path=env_path, override=False)
-
-    # Step 3: Override Global + LLM settings from env
-    if "MAX_ITERATIONS" in os.environ:
-        config_data["max_iterations"] = int(os.environ["MAX_ITERATIONS"])
-    if "OUTPUT_DIR" in os.environ:
-        config_data["output_dir"] = os.environ["OUTPUT_DIR"]
-    if "VERBOSE" in os.environ:
-        config_data["verbose"] = os.environ["VERBOSE"].lower() in ("true", "1", "yes")
-
-    llm_data_raw = config_data.get("llm", {})
-    llm_data = dict(llm_data_raw) if isinstance(llm_data_raw, dict) else {}
-    
-    # Base LLM Overrides
-    if "LLM_BASE_URL" in os.environ:
-        llm_data["base_url"] = os.environ["LLM_BASE_URL"]
-    if "LLM_API_KEY" in os.environ:
-        llm_data["api_key"] = os.environ["LLM_API_KEY"]
-    if "LLM_MODEL" in os.environ:
-        llm_data["model"] = os.environ["LLM_MODEL"]
-        
-    converter_raw = llm_data.get("converter", {})
-    converter_data = dict(converter_raw) if isinstance(converter_raw, dict) else {}
-    
-    reviewer_raw = llm_data.get("reviewer", {})
-    reviewer_data = dict(reviewer_raw) if isinstance(reviewer_raw, dict) else {}
-
-    # Converter LLM Overrides
-    if "LLM_CONVERTER_TEMPERATURE" in os.environ:
-        converter_data["temperature"] = float(os.environ["LLM_CONVERTER_TEMPERATURE"])
-    if "LLM_CONVERTER_MAX_TOKENS" in os.environ:
-        converter_data["max_tokens"] = int(os.environ["LLM_CONVERTER_MAX_TOKENS"])
-    if "LLM_CONVERTER_TOP_P" in os.environ:
-        converter_data["top_p"] = float(os.environ["LLM_CONVERTER_TOP_P"])
-    if "LLM_CONVERTER_TOP_K" in os.environ:
-        converter_data["top_k"] = int(os.environ["LLM_CONVERTER_TOP_K"])
-
-    # Reviewer LLM Overrides
-    if "LLM_REVIEWER_TEMPERATURE" in os.environ:
-        reviewer_data["temperature"] = float(os.environ["LLM_REVIEWER_TEMPERATURE"])
-    if "LLM_REVIEWER_MAX_TOKENS" in os.environ:
-        reviewer_data["max_tokens"] = int(os.environ["LLM_REVIEWER_MAX_TOKENS"])
-    if "LLM_REVIEWER_TOP_P" in os.environ:
-        reviewer_data["top_p"] = float(os.environ["LLM_REVIEWER_TOP_P"])
-    if "LLM_REVIEWER_TOP_K" in os.environ:
-        reviewer_data["top_k"] = int(os.environ["LLM_REVIEWER_TOP_K"])
-
-    llm_data["converter"] = converter_data
-    llm_data["reviewer"] = reviewer_data
-    config_data["llm"] = llm_data
+    # Step 2: Overlay optional config/config.local.json
+    local_config_path = config_path.parent / "config.local.json"
+    if local_config_path.exists():
+        with open(local_config_path, "r", encoding="utf-8") as f:
+            local_data = json.load(f)
+        if isinstance(local_data, dict):
+            config_data = _deep_merge(config_data, local_data)
 
     return AppConfig(**config_data)
+
+
+def load_project_version(pyproject_path: Optional[Path] = None) -> str:
+    """Load project version from pyproject.toml [project].version."""
+    if pyproject_path is None:
+        pyproject_path = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
+
+    if not pyproject_path.exists():
+        raise FileNotFoundError(f"pyproject.toml not found: {pyproject_path}")
+
+    in_project_section = False
+    version_pattern = re.compile(r'^version\s*=\s*"([^"]+)"\s*$')
+
+    for line in pyproject_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_project_section = stripped == "[project]"
+            continue
+        if not in_project_section:
+            continue
+
+        match = version_pattern.match(stripped)
+        if match:
+            return match.group(1)
+
+    raise ValueError("Could not find [project].version in pyproject.toml")
 
 
 def merge_with_cli(config: AppConfig, cli_args: dict[str, Any]) -> AppConfig:

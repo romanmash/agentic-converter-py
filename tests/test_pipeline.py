@@ -63,6 +63,8 @@ class TestPipelineLoop:
             mock_client,
             converter_params=default_config.llm.converter,
             reviewer_params=default_config.llm.reviewer,
+            converter_prompt="converter",
+            reviewer_prompt="reviewer",
             max_iterations=5,
         )
 
@@ -89,6 +91,8 @@ class TestPipelineLoop:
             mock_client,
             converter_params=default_config.llm.converter,
             reviewer_params=default_config.llm.reviewer,
+            converter_prompt="converter",
+            reviewer_prompt="reviewer",
             max_iterations=5,
         )
 
@@ -109,6 +113,8 @@ class TestPipelineLoop:
             mock_client,
             converter_params=default_config.llm.converter,
             reviewer_params=default_config.llm.reviewer,
+            converter_prompt="converter",
+            reviewer_prompt="reviewer",
             max_iterations=3,
         )
 
@@ -128,6 +134,8 @@ class TestPipelineLoop:
             mock_client,
             converter_params=default_config.llm.converter,
             reviewer_params=default_config.llm.reviewer,
+            converter_prompt="converter",
+            reviewer_prompt="reviewer",
             max_iterations=1,
         )
 
@@ -151,6 +159,8 @@ class TestPipelineLoop:
             mock_client,
             converter_params=converter_params,
             reviewer_params=reviewer_params,
+            converter_prompt="converter",
+            reviewer_prompt="reviewer",
             max_iterations=1,
         )
 

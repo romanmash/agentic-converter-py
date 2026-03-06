@@ -10,16 +10,23 @@ Tests cover:
 
 from __future__ import annotations
 
-import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 
-def _config_version() -> str:
-    config_path = Path(__file__).resolve().parent.parent / "config.json"
-    config_data = json.loads(config_path.read_text(encoding="utf-8"))
-    return str(config_data["version"])
+def _pyproject_version() -> str:
+    pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    text = pyproject_path.read_text(encoding="utf-8")
+    match = re.search(
+        r'^\[project\][\s\S]*?^version\s*=\s*"([^"]+)"\s*$',
+        text,
+        flags=re.MULTILINE,
+    )
+    if match is None:
+        raise AssertionError("Could not read [project].version from pyproject.toml")
+    return match.group(1)
 
 
 class TestCLIParsing:
@@ -42,7 +49,7 @@ class TestCLIParsing:
             text=True,
         )
         assert result.returncode == 0
-        assert _config_version() in result.stdout
+        assert _pyproject_version() in result.stdout
 
     def test_missing_path_error(self) -> None:
         result = subprocess.run(
