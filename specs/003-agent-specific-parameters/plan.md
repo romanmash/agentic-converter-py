@@ -7,18 +7,18 @@
 
 Decouple the LLM hyperparameters for the Converter and Reviewer agents so each can be tuned for their specific cognitive role. As outlined in the spec, temperature 0.8 is quite high for YAML code generation and causes subtle syntax slips, wrong action choices, and extra "helpful" incorrect steps.
 
-We will eliminate all hardcoded LLM configuration from the codebase to enforce `config.json` as the extreme single source of truth, and ensure ALL configuration parameters (except version) can be overridden by `.env` variables.
+We will eliminate all hardcoded LLM configuration from the codebase to enforce `config/config.json` as the extreme single source of truth for runtime defaults, and use optional `config/config.local.json` for machine-specific overrides.
 
 ## Technical Context
 
 **Language/Version**: Python 3.10+
-**Primary Dependencies**: pydantic, python-dotenv, openai
+**Primary Dependencies**: pydantic, openai
 **Storage**: N/A
 **Testing**: pytest
 **Target Platform**: CLI Tool
 **Project Type**: standalone CLI application
 **Constraints**: No hardcoded python defaults for Pydantic `LLMParameters`.
-**Scale/Scope**: Impacts `config.json`, `.env`, `manager.py`, `client.py`, and both agents.
+**Scale/Scope**: Impacts `config/config.json`, `config/config.local.json`, `manager.py`, `client.py`, and both agents.
 
 ## Constitution Check
 
@@ -54,7 +54,7 @@ src/
 
 tests/
 ├── conftest.py           # Update mock values
-└── test_config.py        # Add unit tests for .env overrides
+└── test_config.py        # Add unit tests for config.local overrides
 ```
 
 **Structure Decision**: Extending the existing domain structure. Pydantic models in `config/manager.py` handle data sanitization, `client.py` handles API submission execution.
@@ -87,14 +87,10 @@ class LLMConfig(BaseModel):
     converter: LLMParameters
     reviewer: LLMParameters
 ```
-*Note: We expressly DO NOT use `Field(default=...)` on the `LLMParameters` (nor `base_url`, `api_key`, `model`, etc.) to fulfill the "no hardcoding at all in manager.py" requirement. All properties will load solely from `config.json` or `.env` overrides.*
+*Note: We expressly DO NOT use `Field(default=...)` on the `LLMParameters` (nor `base_url`, `api_key`, `model`, etc.) to fulfill the "no hardcoding at all in manager.py" requirement. All properties load from `config/config.json`, with optional override via `config/config.local.json`.*
 
-### .Env Override Expansion
-Since ALL parameters (except version) must be overridable by `.env`, `load_config` will use `os.environ.get()` to override:
-- `MAX_ITERATIONS`, `OUTPUT_DIR`, `VERBOSE`
-- `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`
-- `LLM_CONVERTER_TEMPERATURE`, `LLM_CONVERTER_MAX_TOKENS`, `LLM_CONVERTER_TOP_P`, `LLM_CONVERTER_TOP_K`
-- `LLM_REVIEWER_TEMPERATURE`, `LLM_REVIEWER_MAX_TOKENS`, `LLM_REVIEWER_TOP_P`, `LLM_REVIEWER_TOP_K`
+### Local Override Expansion
+Since all `config/config.json` parameters should be overridable locally, `load_config` will deep-merge optional `config/config.local.json` on top of defaults.
 
 ### Client Integration
 Update `LLMClient.chat()` to accept `params: LLMParameters` directly, passing its fields into `self._client.chat.completions.create(**kwargs)`. `top_k` must be passed via the `extra_body` kwarg.
