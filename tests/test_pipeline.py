@@ -45,6 +45,37 @@ class TestVerdictParser:
         status, _ = _parse_verdict("status: approved")
         assert status == PipelineStatus.APPROVED
 
+    def test_parse_changes_needed_strips_trailing_fence_line(self) -> None:
+        response = (
+            "STATUS: CHANGES_NEEDED\n"
+            "ISSUES:\n"
+            "- Missing checkout step\n"
+            "SUGGESTIONS:\n"
+            "- Add actions/checkout@v4\n"
+            "```"
+        )
+        status, feedback = _parse_verdict(response)
+        assert status == PipelineStatus.CHANGES_NEEDED
+        assert feedback is not None
+        assert "Missing checkout step" in feedback
+        assert "```" not in feedback
+
+    def test_parse_changes_needed_strips_fenced_wrapper(self) -> None:
+        response = (
+            "```text\n"
+            "STATUS: CHANGES_NEEDED\n"
+            "ISSUES:\n"
+            "- Missing jobs section\n"
+            "SUGGESTIONS:\n"
+            "- Add jobs block\n"
+            "```"
+        )
+        status, feedback = _parse_verdict(response)
+        assert status == PipelineStatus.CHANGES_NEEDED
+        assert feedback is not None
+        assert "Missing jobs section" in feedback
+        assert "```" not in feedback
+
 
 class TestPipelineLoop:
     """Test the converter↔reviewer agentic loop."""

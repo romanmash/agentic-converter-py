@@ -129,12 +129,11 @@ def generate_report(
         lines.append(f"- [ ] {item}")
     lines.append("")
 
-    # Generated Workflow (embedded YAML)
+    # Generated Workflow (embedded YAML without fenced backticks)
     lines.append("## Generated Workflow")
     lines.append("")
-    lines.append("```yaml")
-    lines.append(state.workflow_yaml if state.workflow_yaml else "# No YAML generated")
-    lines.append("```")
+    workflow_yaml = state.workflow_yaml if state.workflow_yaml else "# No YAML generated"
+    lines.extend(f"    {line}" if line else "" for line in workflow_yaml.splitlines())
     lines.append("")
 
     return "\n".join(lines)

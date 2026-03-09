@@ -10,6 +10,29 @@ from src.config.manager import LLMParameters
 from src.graph.pipeline import PipelineState, PipelineStatus
 from src.llm.client import LLMClient
 
+
+def _normalize_feedback(feedback: str) -> str:
+    """Normalize reviewer feedback text for downstream report rendering.
+
+    The reviewer prompt explicitly forbids markdown fences, but models may still
+    emit stray fence markers (for example a trailing ``` line). Remove those
+    artifacts while preserving substantive feedback content.
+    """
+    cleaned_lines: list[str] = []
+    for line in feedback.splitlines():
+        if line.strip().startswith("```"):
+            continue
+        cleaned_lines.append(line)
+
+    cleaned = "\n".join(cleaned_lines).strip()
+
+    # Defensive cleanup in case a fence token is glued to the end of text.
+    while cleaned.endswith("```"):
+        cleaned = cleaned[:-3].rstrip()
+
+    return cleaned
+
+
 def _parse_verdict(response: str) -> tuple[PipelineStatus, str | None]:
     """Parse the reviewer's structured response.
 
@@ -34,11 +57,15 @@ def _parse_verdict(response: str) -> tuple[PipelineStatus, str | None]:
             elif "CHANGES" in status_value:
                 # Extract everything after the STATUS line as feedback
                 status_idx = response.index(line)
-                feedback = response[status_idx + len(line) :].strip()
-                return PipelineStatus.CHANGES_NEEDED, feedback if feedback else response
+                feedback = _normalize_feedback(
+                    response[status_idx + len(line) :].strip()
+                )
+                if feedback:
+                    return PipelineStatus.CHANGES_NEEDED, feedback
+                return PipelineStatus.CHANGES_NEEDED, _normalize_feedback(response)
 
     # Unparseable — treat as CHANGES_NEEDED with raw output
-    return PipelineStatus.CHANGES_NEEDED, response
+    return PipelineStatus.CHANGES_NEEDED, _normalize_feedback(response)
 
 
 def review(

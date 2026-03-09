@@ -112,7 +112,8 @@ class TestReportContent:
         state = self._make_state(yaml_content=yaml_content)
         report = generate_report(state, "s", "o")
         assert "## Generated Workflow" in report
-        assert "```yaml" in report
+        assert "```yaml" not in report
+        assert not report.rstrip().endswith("```")
         assert "name: ci" in report
         assert "runs-on: ubuntu-latest" in report
 

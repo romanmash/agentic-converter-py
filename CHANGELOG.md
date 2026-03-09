@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-03-09
+
+### Fixed
+
+- Sanitized reviewer feedback to remove stray markdown fence artifacts before storing/reporting comments
+- Eliminated trailing code-fence artifacts in generated `report.md` output
+- Removed fenced YAML wrapper from report workflow section to avoid fence leakage into rendered output
+
+### Added
+
+- Regression tests for reviewer verdict parsing with trailing and wrapped markdown fences
+- Regression assertion that reports do not end with trailing `````
+
 ## [1.3.0] - 2026-03-06
 
 ### Changed
