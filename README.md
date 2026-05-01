@@ -1,10 +1,22 @@
-﻿# AgenticConverter
+# Agentic Converter
 
-> CLI tool that converts Jenkinsfiles to GitHub Actions workflow YAML using a local LLM and an iterative agentic loop.
+Python-first CLI that converts Jenkinsfiles into GitHub Actions workflow YAML using a locally-hosted LLM and an iterative agentic converter-reviewer loop.
 
-## Overview
+## Purpose
 
-AgenticConverter reads a Jenkinsfile (or a directory of Jenkinsfiles), sends it to a locally-hosted LLM, and produces GitHub Actions YAML. A **reviewer agent** evaluates the output and iterates with the converter until the result is approved or a max iteration count is reached. A **conversion report** (`report.md`) is generated alongside each output, providing confidence scoring and a manual verification checklist.
+Agentic Converter is built for teams migrating CI from Jenkins to GitHub Actions who want:
+
+- fast first-pass workflow conversion
+- iterative quality control via an LLM reviewer pass
+- an auditable conversion report (`report.md`) per output
+
+## How It Works
+
+- Reads a [Jenkinsfile](docs/data-demo/input/1/Jenkinsfile) (or a directory of Jenkinsfiles) as conversion input.
+- Converter agent sends Jenkins pipeline content to LLM and generates GitHub Actions workflow YAML.
+- Reviewer agent evaluates the generated workflow output.
+- Iterates converter and reviewer until the result is approved or a max iteration count is reached.
+- Produces final GitHub Actions YAML ([ci.yml](docs/data-demo/output/1/ci.yml)) and conversion report ([report.md](docs/data-demo/output/1/report.md)) for each output, including confidence scoring and a manual verification checklist.
 
 ```mermaid
 flowchart LR
@@ -15,14 +27,17 @@ flowchart LR
     D -->|Feedback| B
 ```
 
-> For a comprehensive architectural walkthrough, design rationale, and pitch presentation, see [docs/PITCH.md](docs/PITCH.md).
+## Architecture Pitch
 
-## Prerequisites
+- High-level technical pitch (deep dive): [`docs/PITCH.md`](docs/PITCH.md)
 
-- **Python 3.10+**
-- **[uv](https://docs.astral.sh/uv/)** — Python package manager
-- **Local LLM Server** — e.g., [LM Studio](https://lmstudio.ai/) or [LightLLM](https://github.com/ModelTC/lightllm) exposing an OpenAI-compatible API.
-  > *Example:* A local model like `Qwen2.5-Coder` works well for this PoC.
+## Tech Stack
+
+- Core runtime: `Python 3.10+`, `uv`
+- LLM runtime: Local OpenAI-compatible server such as `LM Studio` or `LightLLM`
+- LLM integration: `openai` SDK client wrapper against local OpenAI-compatible endpoints
+- Data modeling: `Pydantic`
+- Quality and testing: `pytest` (offline, mocked LLM client)
 
 ## Quick Start
 
@@ -47,7 +62,7 @@ uv run python -m src.main .data/input/1/Jenkinsfile
 uv run python -m src.main .data/input/
 ```
 
-## CLI Reference
+## CLI
 
 ```
 usage: agentic-converter [-h] [-V] [-o DIR] [-n N] [-v] path
@@ -94,21 +109,29 @@ Use `config/config.local.json` for machine-specific overrides you want outside g
 
 ### Working Data
 
-All runtime data lives in `.data/` (gitignored):
+Conversion data lives in `.data/`.
+For a real generated dataset, see `docs/data-demo/`.
 
 | Directory | Purpose |
 |---|---|
-| `.data/input/` | Place Jenkinsfiles here for conversion |
+| `.data/input/` | Jenkinsfiles to be converted |
 | `.data/output/` | Generated GitHub Actions YAML + conversion reports |
 
 ## Repository Structure
 
 ```
-AgenticConverter/
+agentic-converter-py/
+├── .codex/                  # Codex assistant project configuration
+├── .specify/                # SpecKit templates and helper scripts
+├── .data/                   # Runtime conversion data
 ├── config/
 │   ├── config.json               # App defaults (single source of truth)
-│   ├── config.local.example.json # Optional local override template
-│   └── config.local.json         # Optional local overrides (gitignored)
+│   └── config.local.example.json # Optional local override template
+├── docs/
+│   ├── data-demo/           # Real conversion input/output examples
+│   ├── CASE.md              # Original customer case brief
+│   └── PITCH.md             # Pitch presentation (architecture, rationale, diagrams)
+├── specs/                   # Feature specifications (SpecKit methodology)
 ├── src/
 │   ├── main.py              # CLI entry point + ALL file I/O
 │   ├── config/manager.py    # config/config.json + config/config.local.json loading and merging
@@ -120,27 +143,14 @@ AgenticConverter/
 │   ├── llm/client.py        # OpenAI SDK wrapper (Dependency Injection)
 │   └── prompts/             # System prompts as Markdown files
 ├── tests/                   # pytest suite (runs offline, no LLM needed)
-├── specs/                   # Feature specifications (Spec Kit methodology)
-│   ├── 001-agentic-converter/
-│   ├── 002-conversion-report/
-│   ├── 003-agent-specific-parameters/
-│   ├── 004-file-only-configuration/
-│   ├── 005-io-boundary-hardening/
-│   └── 006-docs-runtime-parity/
-├── docs/
-│   ├── CASE.md              # Original customer case brief
-│   └── PITCH.md             # Pitch presentation (architecture, rationale, diagrams)
-├── .data/                   # Runtime inputs/outputs (gitignored)
-├── .tmp/                    # Research/work artifacts (gitignored)
-├── .venv/                   # Local virtual environment (optional, local)
+├── AGENTS.md                # AI assistant collaboration rules
 ├── CHANGELOG.md             # Version history
 ├── CONTRIBUTING.md          # Contribution guidelines
-├── AGENTS.md                # AI assistant collaboration rules
-├── pyproject.toml           # Project metadata + dependencies
+├── LICENSE                  # MIT License
+├── pyproject.toml           # Project metadata and dependencies
 ├── uv.lock                  # Locked dependency graph
-├── .gitignore               # Ignore rules
 ├── .editorconfig            # Editor defaults
-└── LICENSE                  # MIT License
+└── .gitignore               # Ignore rules
 ```
 
 ## Testing

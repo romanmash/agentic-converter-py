@@ -1,0 +1,93 @@
+name: Jenkinsfile to GitHub Actions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:8.7.0-jdk17-alpine
+      args: '-u root'
+    env:
+      APP_ENV: "ci"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+  prepare-tools:
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:8.7.0-jdk17-alpine
+      args: '-u root'
+    env:
+      APP_ENV: "ci"
+    steps:
+      - name: Install tools
+        run: apk add --no-cache bash git jq
+      - name: Verify jq installation
+        run: jq --version
+
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:8.7.0-jdk17-alpine
+      args: '-u root'
+    env:
+      APP_ENV: "ci"
+    steps:
+      - name: Build project
+        run: ./gradlew --no-daemon clean build
+
+  tests:
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:8.7.0-jdk17-alpine
+      args: '-u root'
+    env:
+      APP_ENV: "ci"
+    strategy:
+      matrix:
+        job: [unit-tests, lint]
+    steps:
+      - name: Run ${{ matrix.job }}
+        run: |
+          if [ "${{ matrix.job }}" == "unit-tests" ]; then
+            ./gradlew --no-daemon test
+          elif [ "${{ matrix.job }}" == "lint" ]; then
+            ./gradlew --no-daemon check
+          fi
+      - name: Archive test results
+        if: ${{ matrix.job == 'unit-tests' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: build/test-results/test/*.xml
+
+  publish-artifacts:
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:8.7.0-jdk17-alpine
+      args: '-u root'
+    env:
+      APP_ENV: "ci"
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Publish artifacts (placeholder)
+        run: echo 'Publishing artifacts (placeholder)'
+
+  archive-artifacts:
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:8.7.0-jdk17-alpine
+      args: '-u root'
+    env:
+      APP_ENV: "ci"
+    steps:
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-libs
+          path: build/libs/*.jar

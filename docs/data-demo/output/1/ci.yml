@@ -1,0 +1,40 @@
+name: Jenkins to GitHub Actions Conversion
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  APP_ENV: ci
+
+jobs:
+  checkout-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build project
+        run: ./gradlew --no-daemon clean build
+
+  test-and-upload-results:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run tests
+        run: ./gradlew --no-daemon test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: build/test-results/test/*.xml
+
+  archive-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-libs
+          path: build/libs/*.jar
